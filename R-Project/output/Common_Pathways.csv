@@ -1,0 +1,208 @@
+"CommonWith","CommonWithout","CommonIntersection","Uncommen","UncommonWith","UncommonWithout"
+"chromosome organization","mitotic cell cycle process","chromosome organization","regulation of reproductive process","regulation of reproductive process","structural molecule activity"
+"mitotic cell cycle process","mitotic cell cycle","mitotic cell cycle process","protein localization to chromosome, centromeric region","protein localization to chromosome, centromeric region","protein-DNA complex organization"
+"mitotic cell cycle","cell division","mitotic cell cycle","regulation of meiotic cell cycle","regulation of meiotic cell cycle","animal organ regeneration"
+"chromosome segregation","regulation of nuclear division","chromosome segregation","cytoskeleton-dependent cytokinesis","cytoskeleton-dependent cytokinesis","extracellular region"
+"cell cycle","regulation of mitotic nuclear division","cell cycle","protein localization to chromosome","protein localization to chromosome","extracellular organelle"
+"cell division","nuclear division","cell division","microtubule","microtubule","extracellular membrane-bounded organelle"
+"cell cycle process","chromosomal region","cell cycle process","intracellular signal transduction","intracellular signal transduction","extracellular vesicle"
+"nuclear chromosome segregation","mitotic nuclear division","nuclear chromosome segregation","cell population proliferation","cell population proliferation","positive regulation of cytokinesis"
+"nuclear division","mitotic cell cycle phase transition","nuclear division","meiotic cell cycle phase transition","meiotic cell cycle phase transition","cortical actin cytoskeleton organization"
+"chromosomal region","chromosome organization","chromosomal region","microtubule-based process","microtubule-based process","extracellular space"
+"sister chromatid segregation","nuclear chromosome segregation","sister chromatid segregation","polymeric cytoskeletal fiber","polymeric cytoskeletal fiber","positive regulation of cell population proliferation"
+"mitotic cell cycle phase transition","cell cycle process","mitotic cell cycle phase transition","positive regulation of cellular component organization","positive regulation of cellular component organization","positive regulation of apoptotic process"
+"mitotic nuclear division","regulation of mitotic cell cycle phase transition","mitotic nuclear division","tubulin binding","tubulin binding","extracellular exosome"
+"cell cycle phase transition","mitotic sister chromatid segregation","cell cycle phase transition","positive regulation of biological process","positive regulation of biological process","protein-containing complex assembly"
+"organelle fission","chromosome, centromeric region","organelle fission","microtubule organizing center","microtubule organizing center","cyclin-dependent protein kinase holoenzyme complex"
+"mitotic sister chromatid segregation","cell cycle phase transition","mitotic sister chromatid segregation","telomere organization","telomere organization","oxidoreductase activity"
+"regulation of mitotic cell cycle","chromosome segregation","regulation of mitotic cell cycle","peptidase inhibitor activity","peptidase inhibitor activity","positive regulation of programmed cell death"
+"chromosome, centromeric region","cell cycle","chromosome, centromeric region","chromosome condensation","chromosome condensation","positive regulation of transport"
+"regulation of mitotic cell cycle phase transition","structural molecule activity","regulation of mitotic cell cycle phase transition","enzyme regulator activity","enzyme regulator activity","chromatin"
+"regulation of nuclear division","organelle fission","regulation of nuclear division","anaphase-promoting complex","anaphase-promoting complex","collagen-containing extracellular matrix"
+"chromosome","regulation of mitotic cell cycle","chromosome","centrosome","centrosome","external encapsulating structure"
+"regulation of cell cycle","sister chromatid segregation","regulation of cell cycle","organelle localization","organelle localization","extracellular matrix"
+"regulation of mitotic nuclear division","chromosome separation","regulation of mitotic nuclear division","establishment of organelle localization","establishment of organelle localization","monocarboxylic acid biosynthetic process"
+"regulation of cell cycle phase transition","regulation of chromosome separation","regulation of cell cycle phase transition","peptidase regulator activity","peptidase regulator activity","hormone metabolic process"
+"regulation of cell cycle process","regulation of mitotic sister chromatid separation","regulation of cell cycle process","spindle microtubule","spindle microtubule","liver regeneration"
+"microtubule cytoskeleton organization involved in mitosis","mitotic sister chromatid separation","microtubule cytoskeleton organization involved in mitosis","positive regulation of cell cycle G1/S phase transition","positive regulation of cell cycle G1/S phase transition","regulation of GTPase activity"
+"regulation of chromosome segregation","regulation of mitotic metaphase/anaphase transition","regulation of chromosome segregation","molecular function regulator activity","molecular function regulator activity","developmental process"
+"positive regulation of cell cycle process","regulation of metaphase/anaphase transition of cell cycle","positive regulation of cell cycle process","cellular response to stimulus","cellular response to stimulus","cell death"
+"negative regulation of mitotic nuclear division","regulation of cell cycle process","negative regulation of mitotic nuclear division","regulation of protein catabolic process","regulation of protein catabolic process","programmed cell death"
+"negative regulation of nuclear division","mitotic spindle assembly checkpoint signaling","negative regulation of nuclear division","kinase binding","kinase binding","apoptotic process"
+"regulation of mitotic sister chromatid segregation","spindle checkpoint signaling","regulation of mitotic sister chromatid segregation","spindle midzone","spindle midzone","regulation of cell cycle G1/S phase transition"
+"cellular component organization","spindle assembly checkpoint signaling","cellular component organization","centrosome localization","centrosome localization","regulation of peptide transport"
+"metaphase/anaphase transition of mitotic cell cycle","mitotic spindle checkpoint signaling","metaphase/anaphase transition of mitotic cell cycle","microtubule organizing center localization","microtubule organizing center localization","anion binding"
+"metaphase/anaphase transition of cell cycle","negative regulation of mitotic nuclear division","metaphase/anaphase transition of cell cycle","signal transduction","signal transduction",NA
+"chromosome separation","regulation of cell cycle phase transition","chromosome separation","organelle assembly","organelle assembly",NA
+"regulation of chromosome separation","regulation of chromosome segregation","regulation of chromosome separation","gamete generation","gamete generation",NA
+"condensed chromosome","metaphase/anaphase transition of mitotic cell cycle","condensed chromosome","chromosome, telomeric region","chromosome, telomeric region",NA
+"regulation of mitotic sister chromatid separation","metaphase/anaphase transition of cell cycle","regulation of mitotic sister chromatid separation","positive regulation of organelle organization","positive regulation of organelle organization",NA
+"mitotic sister chromatid separation","regulation of cell cycle","mitotic sister chromatid separation","supramolecular polymer","supramolecular polymer",NA
+"condensed chromosome, centromeric region","positive regulation of cell cycle process","condensed chromosome, centromeric region","protein kinase binding","protein kinase binding",NA
+"regulation of sister chromatid segregation","regulation of mitotic sister chromatid segregation","regulation of sister chromatid segregation","DNA replication","DNA replication",NA
+"negative regulation of sister chromatid segregation","protein-DNA complex organization","negative regulation of sister chromatid segregation","cytoskeletal protein binding","cytoskeletal protein binding",NA
+"negative regulation of mitotic sister chromatid segregation","negative regulation of nuclear division","negative regulation of mitotic sister chromatid segregation","intercellular bridge","intercellular bridge",NA
+"negative regulation of mitotic metaphase/anaphase transition","regulation of sister chromatid segregation","negative regulation of mitotic metaphase/anaphase transition","regulation of kinase activity","regulation of kinase activity",NA
+"negative regulation of chromosome segregation","mitotic cell cycle checkpoint signaling","negative regulation of chromosome segregation","kinesin binding","kinesin binding",NA
+"negative regulation of metaphase/anaphase transition of cell cycle","negative regulation of sister chromatid segregation","negative regulation of metaphase/anaphase transition of cell cycle","mitotic spindle pole","mitotic spindle pole",NA
+"negative regulation of chromosome separation","negative regulation of mitotic sister chromatid segregation","negative regulation of chromosome separation","regulation of ubiquitin-protein transferase activity","regulation of ubiquitin-protein transferase activity",NA
+"negative regulation of mitotic sister chromatid separation","negative regulation of mitotic metaphase/anaphase transition","negative regulation of mitotic sister chromatid separation","negative regulation of response to wounding","negative regulation of response to wounding",NA
+"regulation of mitotic metaphase/anaphase transition","negative regulation of chromosome segregation","regulation of mitotic metaphase/anaphase transition","positive regulation of catalytic activity","positive regulation of catalytic activity",NA
+"regulation of metaphase/anaphase transition of cell cycle","negative regulation of metaphase/anaphase transition of cell cycle","regulation of metaphase/anaphase transition of cell cycle","anterior/posterior axis specification","anterior/posterior axis specification",NA
+"mitotic spindle assembly checkpoint signaling","negative regulation of chromosome separation","mitotic spindle assembly checkpoint signaling","small GTPase-mediated signal transduction","small GTPase-mediated signal transduction",NA
+"spindle checkpoint signaling","negative regulation of mitotic sister chromatid separation","spindle checkpoint signaling","cytoskeleton","cytoskeleton",NA
+"spindle assembly checkpoint signaling","negative regulation of mitotic cell cycle","spindle assembly checkpoint signaling","regulation of protein kinase activity","regulation of protein kinase activity",NA
+"mitotic spindle checkpoint signaling","condensed chromosome, centromeric region","mitotic spindle checkpoint signaling","anatomical structure development","anatomical structure development",NA
+"mitotic cell cycle checkpoint signaling","chromosome","mitotic cell cycle checkpoint signaling","protein serine kinase activity","protein serine kinase activity",NA
+"kinetochore","negative regulation of mitotic cell cycle phase transition","kinetochore","sister chromatid cohesion","sister chromatid cohesion",NA
+"positive regulation of cell cycle","microtubule cytoskeleton organization involved in mitosis","positive regulation of cell cycle","regulation of cell cycle G2/M phase transition","regulation of cell cycle G2/M phase transition",NA
+"chromosome localization","positive regulation of cell cycle","chromosome localization","positive regulation of protein metabolic process","positive regulation of protein metabolic process",NA
+"cellular component organization or biogenesis","kinetochore","cellular component organization or biogenesis","histone kinase activity","histone kinase activity",NA
+"spindle","cell cycle checkpoint signaling","spindle","positive regulation of G2/M transition of mitotic cell cycle","positive regulation of G2/M transition of mitotic cell cycle",NA
+"regulation of cell division","negative regulation of cell cycle","regulation of cell division","structural molecule activity",NA,NA
+"cell cycle checkpoint signaling","mitotic cytokinesis","cell cycle checkpoint signaling","protein-DNA complex organization",NA,NA
+"negative regulation of mitotic cell cycle phase transition","regulation of chromosome organization","negative regulation of mitotic cell cycle phase transition","animal organ regeneration",NA,NA
+"negative regulation of mitotic cell cycle","negative regulation of chromosome organization","negative regulation of mitotic cell cycle","extracellular region",NA,NA
+"negative regulation of chromosome organization","regulation of cell division","negative regulation of chromosome organization","extracellular organelle",NA,NA
+"regulation of reproductive process","cell cycle G2/M phase transition","mitotic cytokinesis","extracellular membrane-bounded organelle",NA,NA
+"mitotic cytokinesis","cytokinesis","positive regulation of mitotic cell cycle phase transition","extracellular vesicle",NA,NA
+"positive regulation of mitotic cell cycle phase transition","positive regulation of cell cycle phase transition","regulation of chromosome organization","positive regulation of cytokinesis",NA,NA
+"regulation of chromosome organization","protein-containing complex","positive regulation of cell cycle phase transition","cortical actin cytoskeleton organization",NA,NA
+"protein localization to chromosome, centromeric region","mitotic spindle organization","supramolecular complex","extracellular space",NA,NA
+"positive regulation of cell cycle phase transition","cellular component organization","positive regulation of mitotic cell cycle","positive regulation of cell population proliferation",NA,NA
+"supramolecular complex","positive regulation of mitotic cell cycle phase transition","meiotic chromosome segregation","positive regulation of apoptotic process",NA,NA
+"regulation of meiotic cell cycle","negative regulation of cell cycle phase transition","chromatin remodeling","extracellular exosome",NA,NA
+"positive regulation of mitotic cell cycle","cellular component organization or biogenesis","negative regulation of cell cycle","protein-containing complex assembly",NA,NA
+"meiotic chromosome segregation","negative regulation of cell cycle process","cytokinesis","cyclin-dependent protein kinase holoenzyme complex",NA,NA
+"chromatin remodeling","condensed chromosome","establishment of chromosome localization","oxidoreductase activity",NA,NA
+"negative regulation of cell cycle","midbody","metaphase chromosome alignment","positive regulation of programmed cell death",NA,NA
+"cytokinesis","meiotic chromosome segregation","membraneless organelle assembly","positive regulation of transport",NA,NA
+"establishment of chromosome localization","chromosome localization","organelle organization","chromatin",NA,NA
+"metaphase chromosome alignment","positive regulation of mitotic cell cycle","negative regulation of cell cycle phase transition","collagen-containing extracellular matrix",NA,NA
+"membraneless organelle assembly","cellular component assembly","mitotic spindle organization","external encapsulating structure",NA,NA
+"cytoskeleton-dependent cytokinesis","regulation of cytokinesis","negative regulation of cell cycle process","extracellular matrix",NA,NA
+"organelle organization","establishment of chromosome localization","spindle pole","monocarboxylic acid biosynthetic process",NA,NA
+"negative regulation of cell cycle phase transition","metaphase chromosome alignment","negative regulation of cellular component organization","hormone metabolic process",NA,NA
+"mitotic spindle organization","spindle organization","midbody","liver regeneration",NA,NA
+"negative regulation of cell cycle process","negative regulation of cellular component organization","attachment of spindle microtubules to kinetochore","regulation of GTPase activity",NA,NA
+"spindle pole","cell cycle G1/S phase transition","chromatin organization","developmental process",NA,NA
+"negative regulation of cellular component organization","G1/S transition of mitotic cell cycle","cellular component assembly","cell death",NA,NA
+"midbody","positive regulation of cell division","cell cycle G2/M phase transition","programmed cell death",NA,NA
+"attachment of spindle microtubules to kinetochore","animal organ regeneration","membraneless organelle","apoptotic process",NA,NA
+"chromatin organization","spindle","intracellular membraneless organelle","regulation of cell cycle G1/S phase transition",NA,NA
+"cellular component assembly","mitotic spindle","spindle assembly","regulation of peptide transport",NA,NA
+"cell cycle G2/M phase transition","G2/M transition of mitotic cell cycle","mitotic spindle","anion binding",NA,NA
+"membraneless organelle","cellular component biogenesis","microtubule binding",NA,NA,NA
+"intracellular membraneless organelle","chromatin remodeling","spindle organization",NA,NA,NA
+"spindle assembly","protein-containing complex organization","enzyme binding",NA,NA,NA
+"mitotic spindle","extracellular region","mitotic spindle assembly",NA,NA,NA
+"microtubule binding","chromatin organization","regulation of attachment of spindle microtubules to kinetochore",NA,NA,NA
+"protein localization to chromosome","attachment of spindle microtubules to kinetochore","regulation of cellular component organization",NA,NA,NA
+"spindle organization","female gamete generation","negative regulation of cellular process",NA,NA,NA
+"enzyme binding","regulation of attachment of spindle microtubules to kinetochore","G2/M transition of mitotic cell cycle",NA,NA,NA
+"mitotic spindle assembly","positive regulation of cellular process","meiosis I cell cycle process",NA,NA,NA
+"regulation of attachment of spindle microtubules to kinetochore","spindle assembly","sexual reproduction",NA,NA,NA
+"regulation of cellular component organization","extracellular organelle","microtubule cytoskeleton",NA,NA,NA
+"microtubule","extracellular membrane-bounded organelle","cell cycle G1/S phase transition",NA,NA,NA
+"negative regulation of cellular process","extracellular vesicle","cellular component biogenesis",NA,NA,NA
+"intracellular signal transduction","meiotic nuclear division","microtubule cytoskeleton organization",NA,NA,NA
+"cell population proliferation","mitotic spindle assembly","positive regulation of cell division",NA,NA,NA
+"meiotic cell cycle phase transition","positive regulation of cytokinesis","G1/S transition of mitotic cell cycle",NA,NA,NA
+"G2/M transition of mitotic cell cycle","cortical actin cytoskeleton organization","regulation of cytokinesis",NA,NA,NA
+"meiosis I cell cycle process","positive regulation of nuclear division","meiotic nuclear division",NA,NA,NA
+"sexual reproduction","positive regulation of mitotic sister chromatid separation","female meiotic nuclear division",NA,NA,NA
+"microtubule cytoskeleton","meiosis I cell cycle process","mitotic metaphase chromosome alignment",NA,NA,NA
+"cell cycle G1/S phase transition","extracellular space","attachment of mitotic spindle microtubules to kinetochore",NA,NA,NA
+"cellular component biogenesis","cyclin-dependent protein serine/threonine kinase regulator activity","female gamete generation",NA,NA,NA
+"microtubule cytoskeleton organization","positive regulation of cell population proliferation","protein-containing complex organization",NA,NA,NA
+"microtubule-based process","positive regulation of chromosome separation","meiotic cell cycle process",NA,NA,NA
+"positive regulation of cell division","meiosis I","positive regulation of cellular process",NA,NA,NA
+"G1/S transition of mitotic cell cycle","positive regulation of apoptotic process","meiotic cell cycle",NA,NA,NA
+"regulation of cytokinesis","membraneless organelle assembly","protein-containing complex",NA,NA,NA
+"meiotic nuclear division","extracellular exosome","negative regulation of organelle organization",NA,NA,NA
+"female meiotic nuclear division","protein-containing complex assembly","meiosis I",NA,NA,NA
+"polymeric cytoskeletal fiber","regulation of cellular component organization","positive regulation of nuclear division",NA,NA,NA
+"positive regulation of cellular component organization","female meiotic nuclear division","cytoskeleton organization",NA,NA,NA
+"tubulin binding","negative regulation of cellular process","positive regulation of chromosome segregation",NA,NA,NA
+"mitotic metaphase chromosome alignment","cyclin-dependent protein kinase holoenzyme complex","positive regulation of chromosome separation",NA,NA,NA
+"attachment of mitotic spindle microtubules to kinetochore","meiotic cell cycle","regulation of biological process",NA,NA,NA
+"female gamete generation","oxidoreductase activity","positive regulation of mitotic sister chromatid separation",NA,NA,NA
+"protein-containing complex organization","organelle organization","regulation of catalytic activity",NA,NA,NA
+"meiotic cell cycle process","negative regulation of organelle organization","regulation of cellular process",NA,NA,NA
+"positive regulation of biological process","spindle pole","biological regulation",NA,NA,NA
+"positive regulation of cellular process","membraneless organelle","regulation of organelle organization",NA,NA,NA
+"meiotic cell cycle","intracellular membraneless organelle","cyclin-dependent protein serine/threonine kinase regulator activity",NA,NA,NA
+"microtubule organizing center","meiotic cell cycle process","cellular component disassembly",NA,NA,NA
+"protein-containing complex","nucleus","reproductive process",NA,NA,NA
+"telomere organization","enzyme binding","microtubule associated complex",NA,NA,NA
+"peptidase inhibitor activity","biological regulation","nucleus",NA,NA,NA
+"negative regulation of organelle organization","regulation of hormone levels","positive regulation of mitotic nuclear division",NA,NA,NA
+"chromosome condensation","supramolecular complex","regulation of transferase activity",NA,NA,NA
+"enzyme regulator activity","positive regulation of programmed cell death","multicellular organismal reproductive process",NA,NA,NA
+"meiosis I","positive regulation of transport","positive regulation of mitotic metaphase/anaphase transition",NA,NA,NA
+"positive regulation of nuclear division","chromatin","positive regulation of metaphase/anaphase transition of cell cycle",NA,NA,NA
+"cytoskeleton organization","collagen-containing extracellular matrix","regulation of hormone levels",NA,NA,NA
+"anaphase-promoting complex","regulation of cellular process","nucleoplasm",NA,NA,NA
+"positive regulation of chromosome segregation","mitotic metaphase chromosome alignment","regulation of protein metabolic process",NA,NA,NA
+"positive regulation of chromosome separation","microtubule associated complex","regulation of G2/M transition of mitotic cell cycle",NA,NA,NA
+"regulation of biological process","regulation of biological process","regulation of molecular function",NA,NA,NA
+"positive regulation of mitotic sister chromatid separation","external encapsulating structure",NA,NA,NA,NA
+"centrosome","extracellular matrix",NA,NA,NA,NA
+"organelle localization","regulation of catalytic activity",NA,NA,NA,NA
+"regulation of catalytic activity","sexual reproduction",NA,NA,NA,NA
+"establishment of organelle localization","cytoskeleton organization",NA,NA,NA,NA
+"peptidase regulator activity","positive regulation of mitotic nuclear division",NA,NA,NA,NA
+"spindle microtubule","microtubule binding",NA,NA,NA,NA
+"regulation of cellular process","positive regulation of chromosome segregation",NA,NA,NA,NA
+"positive regulation of cell cycle G1/S phase transition","regulation of transferase activity",NA,NA,NA,NA
+"molecular function regulator activity","monocarboxylic acid biosynthetic process",NA,NA,NA,NA
+"cellular response to stimulus","positive regulation of mitotic metaphase/anaphase transition",NA,NA,NA,NA
+"biological regulation","positive regulation of metaphase/anaphase transition of cell cycle",NA,NA,NA,NA
+"regulation of protein catabolic process","hormone metabolic process",NA,NA,NA,NA
+"regulation of organelle organization","liver regeneration",NA,NA,NA,NA
+"kinase binding","regulation of GTPase activity",NA,NA,NA,NA
+"cyclin-dependent protein serine/threonine kinase regulator activity","attachment of mitotic spindle microtubules to kinetochore",NA,NA,NA,NA
+"spindle midzone","cellular component disassembly",NA,NA,NA,NA
+"cellular component disassembly","regulation of molecular function",NA,NA,NA,NA
+"reproductive process","microtubule cytoskeleton organization",NA,NA,NA,NA
+"centrosome localization","regulation of G2/M transition of mitotic cell cycle",NA,NA,NA,NA
+"microtubule organizing center localization","reproductive process",NA,NA,NA,NA
+"microtubule associated complex","developmental process",NA,NA,NA,NA
+"signal transduction","regulation of organelle organization",NA,NA,NA,NA
+"nucleus","cell death",NA,NA,NA,NA
+"organelle assembly","programmed cell death",NA,NA,NA,NA
+"positive regulation of mitotic nuclear division","regulation of protein metabolic process",NA,NA,NA,NA
+"gamete generation","apoptotic process",NA,NA,NA,NA
+"chromosome, telomeric region","regulation of cell cycle G1/S phase transition",NA,NA,NA,NA
+"regulation of transferase activity","regulation of peptide transport",NA,NA,NA,NA
+"positive regulation of organelle organization","microtubule cytoskeleton",NA,NA,NA,NA
+"supramolecular polymer","nucleoplasm",NA,NA,NA,NA
+"multicellular organismal reproductive process","multicellular organismal reproductive process",NA,NA,NA,NA
+"protein kinase binding","anion binding",NA,NA,NA,NA
+"DNA replication",NA,NA,NA,NA,NA
+"cytoskeletal protein binding",NA,NA,NA,NA,NA
+"positive regulation of mitotic metaphase/anaphase transition",NA,NA,NA,NA,NA
+"positive regulation of metaphase/anaphase transition of cell cycle",NA,NA,NA,NA,NA
+"intercellular bridge",NA,NA,NA,NA,NA
+"regulation of kinase activity",NA,NA,NA,NA,NA
+"kinesin binding",NA,NA,NA,NA,NA
+"mitotic spindle pole",NA,NA,NA,NA,NA
+"regulation of ubiquitin-protein transferase activity",NA,NA,NA,NA,NA
+"regulation of hormone levels",NA,NA,NA,NA,NA
+"negative regulation of response to wounding",NA,NA,NA,NA,NA
+"positive regulation of catalytic activity",NA,NA,NA,NA,NA
+"anterior/posterior axis specification",NA,NA,NA,NA,NA
+"small GTPase-mediated signal transduction",NA,NA,NA,NA,NA
+"cytoskeleton",NA,NA,NA,NA,NA
+"nucleoplasm",NA,NA,NA,NA,NA
+"regulation of protein metabolic process",NA,NA,NA,NA,NA
+"regulation of protein kinase activity",NA,NA,NA,NA,NA
+"anatomical structure development",NA,NA,NA,NA,NA
+"regulation of G2/M transition of mitotic cell cycle",NA,NA,NA,NA,NA
+"protein serine kinase activity",NA,NA,NA,NA,NA
+"sister chromatid cohesion",NA,NA,NA,NA,NA
+"regulation of cell cycle G2/M phase transition",NA,NA,NA,NA,NA
+"positive regulation of protein metabolic process",NA,NA,NA,NA,NA
+"histone kinase activity",NA,NA,NA,NA,NA
+"regulation of molecular function",NA,NA,NA,NA,NA
+"positive regulation of G2/M transition of mitotic cell cycle",NA,NA,NA,NA,NA
