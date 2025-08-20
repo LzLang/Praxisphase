@@ -6,10 +6,14 @@ if (!require('BiocManager', quietly = TRUE))
   BiocManager::install("clusterProfiler")
   BiocManager::install("pathview")
   BiocManager::install("enrichplot")
+  BiocManager::install("sva")
 
 if(!require('tidyverse', quietly = TRUE)) {
   install.packages("tidyverse", type="source")
+}
 
+if(!require('VennDiagram', quietly = TRUE)) {
+  install.packages("VennDiagram", type="source")
 }
   
 #library(DESeq2)
@@ -18,6 +22,8 @@ library(edgeR)
 library(ggplot2)
 library(clusterProfiler)
 library(enrichplot)
+library(sva)
+library(VennDiagram)
 library("org.Hs.eg.db", character.only = TRUE)
 
 load_data <- function(outlier = TRUE) {
@@ -29,6 +35,8 @@ load_data <- function(outlier = TRUE) {
       .[order(.$'Run'),] %>%
       column_to_rownames(., var="Run")
     ml_features <- read_csv(paste(getwd(), '/data/ml_features_with_outlier.csv', sep=''))
+    batch <- read_csv(gzfile(paste(getwd(),'/data/merged_data_R.csv.gz', sep = ''))) %>%
+      column_to_rownames(., var="gene_id")
   }
   else {
     # load data
@@ -38,11 +46,14 @@ load_data <- function(outlier = TRUE) {
       .[order(.$'Run'),] %>%
       column_to_rownames(., var="Run")
     ml_features <- read_csv(paste(getwd(), '/data/ml_features_without_outlier.csv', sep=''))
+    batch <- read_csv(gzfile(paste(getwd(),'/data/merged_data_R.csv.gz', sep = ''))) %>%
+      column_to_rownames(., var="gene_id")
   }
   
-  assign('counts', counts, envir = .GlobalEnv)  
+  assign('counts', as.matrix(counts), envir = .GlobalEnv)  
   assign('metadata', metadata, envir = .GlobalEnv)  
   assign('ml_features', ml_features, envir = .GlobalEnv)
+  assign('batch', batch, envir = .GlobalEnv)
 }
 
 differential_expression <- function() {
@@ -69,7 +80,6 @@ differential_expression <- function() {
   ### By default, results are orderd by largest B (the log odds value)
   ### -> Most differentially expressed genes should be toward the top
   stats_df <- topTable(fit, coef = ncol(design_matrix), n = Inf)
-  print(head(stats_df))
   
   ##########
   stats_df$gene_id <- rownames(stats_df)
@@ -164,17 +174,201 @@ enrichment_analysis <- function(number = 1000, ml_feature = NULL) {
   return(gse)
 }
 
+over_representation <- function(number=1000, ml_feature=NULL) {
+  #Prepare Input
+  if (!is.null(ml_feature)){
+    if (ml_feature=='logistic_regression') {
+      gene_list <- ml_features$logreg_log2fc[1:number]
+      names(gene_list) <- ml_features$logistic_regression[1:number]
+    }
+    else if (ml_feature=='random_forest_classification') {
+      gene_list <- ml_features$rf_log2fc[1:number]
+      names(gene_list) <- ml_features$random_forest_classification[1:number]
+    }
+    else stop("Wrong ml_feature selected! You can choose between logistic_regression and random_forest_classification")
+  } else {
+    ## We want the log2 fold change
+    gene_list <- stats_df$logFC
+    ## name the vector
+    names(gene_list) <- stats_df$gene_id
+    ## sort the list in decreasing order (required for clusterProfiler)
+    gene_list <- sort(gene_list, decreasing=TRUE)[1:number]
+  }
+  
+  gene_list <- names(sort(gene_list, decreasing = TRUE))
+  
+  go_enrich <- enrichGO(gene = gene_list,
+                        universe = names(gene_list),
+                        OrgDb = "org.Hs.eg.db",
+                        keyType = "ENSEMBL",
+                        readable = T,
+                        ont = "ALL",
+                        pvalueCutoff = 0.05,
+                        qvalueCutoff = 0.10)
+  
+  return(go_enrich)
+}
+
+batch_correction <- function(number = 1000){
+  ## Setting up the data
+  expression_df <- DGEList(counts) %>% calcNormFactors(.)
+  logCPM <- cpm(expression_df, log=TRUE, prior.count=3)
+  mod = model.matrix(~as.factor(Tumor_Status), data=metadata)
+  mod0 = model.matrix(~1,data=metadata)
+  
+  ## Applying the sva function to estimate batch and other artifacts
+  nsv = num.sv(logCPM, mod, method="leek")
+  svobj = sva(logCPM, mod, mod0, n.sv=nsv)
+  
+  ## Adjusting for surrogate variables using the f.pvalue function
+  pValues = f.pvalue(logCPM, mod, mod0)
+  qValues = p.adjust(pValues, method = "BH")
+  modSV = cbind(mod, svobj$sv)
+  mod0SV = cbind(mod0, svobj$sv)
+  pValuesSV = f.pvalue(as.matrix(logCPM), modSV, mod0SV)
+  qValuesSV = p.adjust(pValuesSV, method = "BH")
+  
+  ## Adjusting for surrogate variables using the limma package
+  fit = lmFit(logCPM, modSV)
+  eb <- eBayes(fit)
+  sv_df <- topTable(eb, coef=2, adjust.method = "BH", number = Inf)
+  assign('sv_df', sv_df, envir = .GlobalEnv)  
+  
+  gene_list <- sv_df$logFC
+  names(gene_list) <- rownames(sv_df)
+  ## sort the list in decreasing order (required for clusterProfiler)
+  gene_list <- sort(gene_list, decreasing=TRUE)[1:number]
+  
+  # Gene Set Enrichment
+  gse <- gseGO(geneList = gene_list,
+               ont = "ALL",
+               keyType = "ENSEMBL",
+               minGSSize = 3,
+               maxGSSize = 800,
+               pvalueCutoff = 0.05,
+               verbose = TRUE,
+               OrgDb = "org.Hs.eg.db",
+               pAdjustMethod = "none")
+  return(gse)
+}
+
+common_pathways <- function(name=''){
+  ####################### Export the patchways
+  gseDGE <- enrichment_analysis(1000)
+  gseLogreg <- enrichment_analysis(1000, 'logistic_regression')
+  gseForest <- enrichment_analysis(1000, 'random_forest_classification')
+  gseBatch <- batch_correction(1000)
+  
+  ## Pathways
+  gseDGEPathways <- gseDGE@result$Description
+  gseLogregPathways <- gseLogreg@result$Description
+  gseForestPathways <- gseForest@result$Description
+  gseBatchPathways <- gseBatch@result$Description
+  
+  commonPathways <- Reduce(intersect, list(gseDGEPathways, gseLogregPathways, gseForestPathways, gseBatchPathways))
+  
+  venn.diagram(
+    x = list(gseDGEPathways, gseLogregPathways, gseForestPathways, gseBatchPathways),
+    category.names = c("DGE", "LogReg", "RandForest", "BatchCor"),
+    filename = paste(getwd(), '/output/Pathways_venn_diagramm_',name, '.png', sep=''),
+    output = FALSE,
+    disable.logging = TRUE
+  )
+  
+  return(commonPathways)
+}
+
+common_features<- function(name= '') {
+  ## Genes
+  logreg_features <- ml_features$logistic_regression[1:1000]
+  rand_features <- ml_features$random_forest_classification[1:1000]
+  
+  gene_list <- stats_df$logFC
+  names(gene_list) <- rownames(stats_df)
+  gene_list <- names(sort(gene_list, decreasing=TRUE)[1:1000])
+  cor_list <- sv_df$logFC
+  names(cor_list) <- rownames(sv_df)
+  cor_list <- names(sort(cor_list, decreasing=TRUE)[1:1000])
+  
+  commonFeatures <- Reduce(intersect, list(gene_list, logreg_features, rand_features, cor_list))
+  
+  venn.diagram(
+    x = list(gene_list, logreg_features, rand_features, cor_list),
+    category.names = c("DGE", "LogReg", "RandForest", "BatchCor"),
+    filename = paste(getwd(), '/output/Features_venn_diagramm_',name, '.png', sep=''),
+    output = FALSE,
+    disable.logging = TRUE
+  )
+  
+  return(commonFeatures)
+}
+
+common_Intersection <- function(commonWith, commonWithout){
+  max_len <- max(
+    length(commonWith),
+    length(commonWithout)
+  )
+  length(commonWith) <- max_len
+  length(commonWithout) <- max_len
+  
+  commonIntersection = Reduce(intersect, list(commonWith, commonWithout))
+  
+  return(commonIntersection)
+}
+
+export_common <- function(name="Common",commonWith, commonWithout, commonIntersection) {
+  uncommonCommon <- setdiff(union(commonWith, commonWithout), commonIntersection)
+  uncommonCommonWith <- setdiff(commonWith, commonIntersection)
+  uncommonCommonWithout <- setdiff(commonWithout, commonIntersection)
+  
+  max_len <- max(
+    length(commonWith),
+    length(commonWithout),
+    length(commonIntersection),
+    length(uncommonCommon),
+    length(uncommonCommonWith),
+    length(uncommonCommonWithout)
+  )
+  length(commonWith) <- max_len
+  length(commonWithout) <- max_len
+  length(commonIntersection) <- max_len
+  length(uncommonCommon) <- max_len
+  length(uncommonCommonWith) <- max_len
+  length(uncommonCommonWithout) <- max_len
+  
+  output <- data.frame(
+    CommonWith = commonWith,
+    CommonWithout = commonWithout,
+    CommonIntersection = commonIntersection,
+    Uncommen = uncommonCommon,
+    UncommonWith = uncommonCommonWith,
+    UncommonWithout = uncommonCommonWithout
+  )
+  write.csv(output, file=paste(getwd(),'/output/', name, '.csv', sep = ''), row.names = F)
+}
+
+# Mit outlier
 load_data()
 stats_df <- differential_expression()
-# 
-#enrichment_analysis(100)
-#enrichment_analysis(100, 'logistic_regression')
-#enrichment_analysis(100, 'random_forest_classification')
-#gse <- enrichment_analysis(1000)
-gse <- enrichment_analysis(1000, 'logistic_regression')
-gse <- enrichment_analysis(1000, 'random_forest_classification')
-gseaplot(gse, by="all", paste("Top", 1000), geneSetID=1)
+commonPathwaysWith <- common_pathways('with')
+commonFeaturesWith <- common_features('with')
 
+# Ohne Outlier
+load_data(FALSE)
+stats_df <- differential_expression()
+commonPathwaysWithout <- common_pathways('without')
+commonFeaturesWithout <- common_features('without')
+
+commonPathwayIntersection <- common_Intersection(commonPathwaysWith, commonPathwaysWithout)
+commonFeatureIntersection <- common_Intersection(commonFeaturesWith, commonFeaturesWithout)
+
+# Pathways
+export_common('Common_Pathways', commonPathwaysWith, commonPathwaysWithout, commonPathwayIntersection)
+export_common('Common_Features', commonFeaturesWith, commonFeaturesWithout, commonFeatureIntersection)
+###################### GSEA
+
+#gse <- enrichment_analysis(1000)
+ 
 #require(DOSE)
 #dotplot(gse, showCategory=10, split=".sign") + facet_grid(.~.sign)
 
@@ -187,3 +381,20 @@ gseaplot(gse, by="all", paste("Top", 1000), geneSetID=1)
 
 
 #ridgeplot(gse) + labs(x = "enrichment distribution")
+
+##################### ORA
+#enrich <- over_representation(1000)
+#enrich <- over_representation(1000, 'logistic_regression')
+#enrich <- over_representation(1000, 'random_forest_classification')
+#upsetplot(enrich)
+
+#barplot(enrich,
+#        drop = TRUE,
+#        showCategory = 10,
+#        title = "GO Biological Pathways",
+#        font.size = 8)
+
+#dotplot(enrich)
+######################
+
+######################
