@@ -7,15 +7,18 @@ if (!require('BiocManager', quietly = TRUE))
   BiocManager::install("pathview")
   BiocManager::install("enrichplot")
   BiocManager::install("sva")
+  BiocManager::install("GOSim")
+  BiocManager::install("biomaRt")
+  BiocManager::install("fgsea")
 
-if(!require('tidyverse', quietly = TRUE)) {
-  install.packages("tidyverse", type="source")
-}
+if(!require('tidyverse', quietly = TRUE)) install.packages("tidyverse", type="source")
 
-if(!require('VennDiagram', quietly = TRUE)) {
-  install.packages("VennDiagram", type="source")
-}
+if(!require("VennDiagram", quietly = TRUE)) install.packages("VennDiagram", type="source")
   
+if(!require("msigdbr", quietly = TRUE)) install.packages("msigdbr", type="source")
+
+install.packages("UpSetR")
+
 #library(DESeq2)
 library(tidyverse)
 library(edgeR)
@@ -24,7 +27,13 @@ library(clusterProfiler)
 library(enrichplot)
 library(sva)
 library(VennDiagram)
+library(GO.db)
+library(biomaRt)
+library(fgsea)
+library(msigdbr)
+library(UpSetR)
 library("org.Hs.eg.db", character.only = TRUE)
+
 
 load_data <- function(outlier = TRUE) {
   if (outlier) {
@@ -65,8 +74,6 @@ differential_expression <- function() {
   # 0: Normal
   # 1: Tumor
   design_matrix <- model.matrix(~., data=metadata)
-  #keep <- filterByExpr(expression_df, design_matrix) 
-  #expression_df <- expression_df[keep,,keep.lib.size=FALSE] %>% calcNormFactors(.)
   
   # Perform differential expression
   ## Use LogCPM -> Use prior counts to damp down the variacnes of logarithms of low counts
@@ -104,112 +111,186 @@ differential_expression <- function() {
   y <- voom(expression_df, design_matrix, plot = T)
   dev.off()
   
-  # How many DE genes are there?
-  #length(which(stats_df$adj.P.Val<0.05))
-  # Mit outlier: 3568
-  # Ohne: 5829
   return(stats_df)
 }
 
-plot_differential_expression <- function(){
-  # Check result by plotting gene
-  ## In our case ENSG00000142748.13 has the greatest B value
-  top_gene_df <- counts %>%
-    # Extract this gene from 'expression_df'
-    #dplyr::filter(rownames(.)=='ENSG00000142748.13') %>%
-    # Transpose so the gene is a column
-    t() %>%
-    # Transpose made this a matrix, let's make it back into a data frame
-    data.frame() %>%
-    rownames_to_column('Run') %>%
-    dplyr::inner_join(dplyr::select(
-      rownames_to_column(metadata, "Run"),
-      Run,
-      Tumor_Status
+over_representation <- function(number=1000, database = 'uniprot', ml_feature=NULL, dataframe=stats_df) {
+  #Prepare Input
+  if (!is.null(ml_feature)){
+    if (ml_feature=='logistic_regression') {
+      gene_list <- ml_features$logreg_log2fc
+      names(gene_list) <- ml_features$logistic_regression
+      gene_list <- gene_list[1:number]
+    }
+    else if (ml_feature=='random_forest_classification') {
+      gene_list <- ml_features$rf_log2fc
+      names(gene_list) <- ml_features$random_forest_classification
+      gene_list <- gene_list[1:number]
+    }
+    else stop("Wrong ml_feature selected! You can choose between logistic_regression and random_forest_classification")
+  } else {
+    ## We want the log2 fold change
+    gene_list <- dataframe$logFC
+    ## name the vector
+    names(gene_list) <- dataframe$gene_id
+    ## sort the list in decreasing order (required for clusterProfiler)
+  }
+  
+  gene_list <- names(sort(gene_list, decreasing = TRUE)[1:number])
+  
+  if(database=='uniprot' || database=='entrez'){
+    mart <- useMart('ENSEMBL_MART_ENSEMBL')
+    mart <- useDataset('hsapiens_gene_ensembl', mart)
+    
+    biomart_id <- getBM(
+      mart = mart,
+      attributes = c('entrezgene_id', 'uniprot_gn_id'),
+      filter = 'ensembl_gene_id',
+      values = gene_list,
+      uniqueRows = TRUE)
+    
+    if(database=='uniprot') {
+      gene_list <- biomart_id$uniprot_gn_id
+      keytype <- 'uniprot'
+    } else if(database=="entrez"){
+      gene_list <- biomart_id$entrezgene_id
+      keytype <- 'ncbi-geneid'
+    }
+    return(enrichKEGG(
+      gene = gene_list,
+      organism = "hsa",
+      keyType = keytype,
+      pvalueCutoff = 0.05,
+      pAdjustMethod = 'BH',
+      universe = names(gene_list),
+      minGSSize = 10,
+      maxGSSize = 500,
+      qvalueCutoff = 0.2,
+      use_internal_data = FALSE
     ))
-  head(top_gene_df)
-  ggplot(top_gene_df, aes(x = Tumor_Status, y=ENSG00000142748.13,color = Tumor_Status,)) +
-    geom_jitter(width = 0.2, height = 0) + # We'll make this a jitter plot
-    theme_classic() # This makes some aesthetic changes
+  } else if(database=='GO'){
+    return(enrichGO(
+      gene = gene_list,
+      OrgDb = 'org.Hs.eg.db',
+      keyType = 'ENSEMBL',
+      ont = 'ALL',
+      pvalueCutoff = 0.05,
+      pAdjustMethod = 'BH',
+      universe = names(gene_list),
+      minGSSize = 10,
+      maxGSSize = 500,
+      qvalueCutoff = 0.2
+    ))
+  } else {
+    print("Wrong Database!")
+    return(NULL)
+  }
 }
 
-enrichment_analysis <- function(number = 1000, ml_feature = NULL) {
-  # Enrichment Analysis
+fora_analysis <- function(number=1000, ml_feature=NULL, dataframe = stats_df, name_vector=NULL) {
   #Prepare Input
   if (!is.null(ml_feature)){
     if (ml_feature=='logistic_regression') {
-      gene_list <- ml_features$logreg_log2fc[1:number]
-      names(gene_list) <- ml_features$logistic_regression[1:number]
+      gene_list <- ml_features$logreg_log2fc
+      names(gene_list) <- ml_features$logistic_regression
+      gene_list <- gene_list[1:number]
+      universe <- ml_features$logistic_regression
     }
     else if (ml_feature=='random_forest_classification') {
-      gene_list <- ml_features$rf_log2fc[1:number]
-      names(gene_list) <- ml_features$random_forest_classification[1:number]
+      gene_list <- ml_features$rf_log2fc
+      names(gene_list) <- ml_features$random_forest_classification
+      gene_list <- gene_list[1:number]
+      universe <- ml_features$random_forest_classification
     }
     else stop("Wrong ml_feature selected! You can choose between logistic_regression and random_forest_classification")
-  } else {
-    ## We want the log2 fold change
-    gene_list <- stats_df$logFC
+  } else if(is.null(name_vector)){
+    gene_list <- dataframe$logFC
     ## name the vector
-    names(gene_list) <- stats_df$gene_id
-    ## sort the list in decreasing order (required for clusterProfiler)
-    gene_list <- sort(gene_list, decreasing=TRUE)[1:number]
+    names(gene_list) <- dataframe$gene_id
+    universe <- dataframe$gene_id
+  } else {
+    gene_list <- name_vector
+    universe <- dataframe$gene_id
   }
   
-  gene_list = sort(gene_list, decreasing = TRUE)
+  if(is.null(name_vector)) gene_list <- names(sort(gene_list, decreasing = TRUE)[1:number])
   
+  gene_sets <- gene_set_df %>% split(x = .$ensembl_gene, f = .$gs_name)
   
+  return(fora(genes = gene_list, universe = universe, pathways = gene_sets))
   
-  # Gene Set Enrichment
-  gse <- gseGO(geneList = gene_list,
-              ont = "ALL",
-              keyType = "ENSEMBL",
-              minGSSize = 3,
-              maxGSSize = 800,
-              pvalueCutoff = 0.05,
-              verbose = TRUE,
-              OrgDb = "org.Hs.eg.db",
-              pAdjustMethod = "none")
-  if(!is.null(number)) {gseaplot(gse, by="all", paste("Top", number), geneSetID=1)}
-  else {gseaplot(gse, by="all", gse$Description[1], geneSetID=1)}
-  return(gse)
+ 
 }
 
-over_representation <- function(number=1000, ml_feature=NULL) {
+do_enrichment <- function(number=1000, ml_feature=NULL, dataframe = stats_df, name_vector=NULL, name=NULL) {
+  if(is.null(name)) throw('Filename vergessen')
+  else print(name)
   #Prepare Input
   if (!is.null(ml_feature)){
     if (ml_feature=='logistic_regression') {
-      gene_list <- ml_features$logreg_log2fc[1:number]
-      names(gene_list) <- ml_features$logistic_regression[1:number]
+      gene_list <- ml_features$logreg_log2fc
+      names(gene_list) <- ml_features$logistic_regression
+      gene_list <- gene_list[1:number]
+      universe <- ml_features$logistic_regression
     }
     else if (ml_feature=='random_forest_classification') {
-      gene_list <- ml_features$rf_log2fc[1:number]
-      names(gene_list) <- ml_features$random_forest_classification[1:number]
+      gene_list <- ml_features$rf_log2fc
+      names(gene_list) <- ml_features$random_forest_classification
+      gene_list <- gene_list[1:number]
+      universe <- ml_features$random_forest_classification
     }
     else stop("Wrong ml_feature selected! You can choose between logistic_regression and random_forest_classification")
-  } else {
-    ## We want the log2 fold change
-    gene_list <- stats_df$logFC
+  } else if(is.null(name_vector)){
+    gene_list <- dataframe$logFC
     ## name the vector
-    names(gene_list) <- stats_df$gene_id
-    ## sort the list in decreasing order (required for clusterProfiler)
-    gene_list <- sort(gene_list, decreasing=TRUE)[1:number]
+    names(gene_list) <- dataframe$gene_id
+    universe <- dataframe$gene_id
+  } else {
+    gene_list <- name_vector
+    universe <- dataframe$gene_id
   }
   
-  gene_list <- names(sort(gene_list, decreasing = TRUE))
+  if(is.null(name_vector)) gene_list <- names(sort(gene_list, decreasing = TRUE)[1:number])
   
-  go_enrich <- enrichGO(gene = gene_list,
-                        universe = names(gene_list),
-                        OrgDb = "org.Hs.eg.db",
-                        keyType = "ENSEMBL",
-                        readable = T,
-                        ont = "ALL",
-                        pvalueCutoff = 0.05,
-                        qvalueCutoff = 0.10)
+  mart <- useMart('ENSEMBL_MART_ENSEMBL')
+  mart <- useDataset('hsapiens_gene_ensembl', mart)
+    
+  biomart_id <- getBM(
+    mart = mart,
+    attributes = 'entrezgene_id',
+    filter = 'ensembl_gene_id',
+    values = gene_list,
+    uniqueRows = TRUE)
+  universe_id <- getBM(
+    mart = mart,
+    attributes = 'entrezgene_id',
+    filter = 'ensembl_gene_id',
+    values = universe,
+    uniqueRows = TRUE)
+    
+  gene_list <- as.character(biomart_id$entrezgene_id)
+  universe <- as.character(universe_id$entrezgene_id)
   
-  return(go_enrich)
+  edo <- enrichDO(
+    gene = gene_list,
+    ont = 'HDO',
+    organism = 'hsa',
+    pvalueCutoff = 0.05,
+    pAdjustMethod = 'BH',
+    universe = universe,
+    minGSSize = 10,
+    maxGSSize = 500,
+    qvalueCutoff = 0.2,
+    readable = FALSE
+  )
+  
+  plot <- barplot(edo, showCategory=20, x='Count', color='p.adjust', title=paste('DO Enrichment Analysis - ', name, sep=''), font.size=8)
+  ggsave(filename = paste(getwd(),'/output/DO/', name, '.png', sep = ''))
+  
+  return(edo)
 }
 
-batch_correction <- function(number = 1000){
+batch_correction <- function(){
   ## Setting up the data
   expression_df <- DGEList(counts) %>% calcNormFactors(.)
   logCPM <- cpm(expression_df, log=TRUE, prior.count=3)
@@ -232,78 +313,186 @@ batch_correction <- function(number = 1000){
   fit = lmFit(logCPM, modSV)
   eb <- eBayes(fit)
   sv_df <- topTable(eb, coef=2, adjust.method = "BH", number = Inf)
-  assign('sv_df', sv_df, envir = .GlobalEnv)  
+  sv_df$gene_id <- rownames(sv_df)
+  sv_df <- sv_df[,c("gene_id", names(sv_df)[1:6])]
   
-  gene_list <- sv_df$logFC
-  names(gene_list) <- rownames(sv_df)
-  ## sort the list in decreasing order (required for clusterProfiler)
-  gene_list <- sort(gene_list, decreasing=TRUE)[1:number]
-  
-  # Gene Set Enrichment
-  gse <- gseGO(geneList = gene_list,
-               ont = "ALL",
-               keyType = "ENSEMBL",
-               minGSSize = 3,
-               maxGSSize = 800,
-               pvalueCutoff = 0.05,
-               verbose = TRUE,
-               OrgDb = "org.Hs.eg.db",
-               pAdjustMethod = "none")
-  return(gse)
+  return(sv_df)
 }
 
-common_pathways <- function(name=''){
-  ####################### Export the patchways
-  gseDGE <- enrichment_analysis(1000)
-  gseLogreg <- enrichment_analysis(1000, 'logistic_regression')
-  gseForest <- enrichment_analysis(1000, 'random_forest_classification')
-  gseBatch <- batch_correction(1000)
+fora_common_pathways <- function(batch_cor, pathway_count = 100, gene_count = 1000, name='') {
+  foraDGE <- fora_analysis(gene_count)
+  foraLogreg <- fora_analysis(gene_count, ml_feature = 'logistic_regression')
+  foraForest <- fora_analysis(gene_count, ml_feature = 'random_forest_classification')
+  foraBatch <- fora_analysis(gene_count, dataframe = batch_cor)
   
-  ## Pathways
-  gseDGEPathways <- gseDGE@result$Description
-  gseLogregPathways <- gseLogreg@result$Description
-  gseForestPathways <- gseForest@result$Description
-  gseBatchPathways <- gseBatch@result$Description
+  foraDGEPathways <- head(foraDGE$pathway[order(foraDGE$padj, decreasing = FALSE)], pathway_count)
+  foraBatchPathways <- head(foraBatch$pathway[order(foraBatch$padj, decreasing = FALSE)], pathway_count)
+  foraLogregPathways <- head(foraLogreg$pathway[order(foraLogreg$padj, decreasing = FALSE)], pathway_count)
+  foraForestPathways <- head(foraForest$pathway[order(foraForest$padj, decreasing = FALSE)], pathway_count)
   
-  commonPathways <- Reduce(intersect, list(gseDGEPathways, gseLogregPathways, gseForestPathways, gseBatchPathways))
+  commonPathways <- Reduce(intersect, list(
+    foraDGEPathways,
+    foraLogregPathways,
+    foraForestPathways,
+    foraBatchPathways
+  ))  %>% c(., rep(NA, pathway_count-length(.)))
+  
+  listInput <- list(DGE = foraDGEPathways, LogReg = foraLogregPathways, RandForest = foraForestPathways, BatchCor = foraBatchPathways)
   
   venn.diagram(
-    x = list(gseDGEPathways, gseLogregPathways, gseForestPathways, gseBatchPathways),
+    x = listInput,
     category.names = c("DGE", "LogReg", "RandForest", "BatchCor"),
     filename = paste(getwd(), '/output/Pathways_venn_diagramm_',name, '.png', sep=''),
+    main = paste(name, sep=''),#+"Pathway-Level Overlap - ", 
     output = FALSE,
-    disable.logging = TRUE
+    disable.logging = TRUE,
+    
+    main.cex = 2.1,
+    main.fontface = "bold",
+    
+    # Numbers
+    cex = 2,
+    fontface = "bold",
+    fontfamily = "sans",
+    
+    
+    # Set names
+    cat.cex = 1.6,
+    cat.fontface = "bold",
+    cat.default.pos = "outer",
+    cat.fontfamily = "sans"
   )
   
-  return(commonPathways)
+  plot <- upset(fromList(listInput), sets = c("DGE", "LogReg", "RandForest", "BatchCor"), order.by = "freq")
+  pdf(file = paste(getwd(),'/output/upset/', name, '.pdf', sep = ''), onefile = FALSE)
+  print(plot)
+  dev.off() 
+  
+  
+  output <- list(
+    DGEPathways = foraDGEPathways,
+    Batch = foraBatchPathways,
+    LogregPathways = foraLogregPathways,
+    ForestPathways = foraForestPathways,
+    CommonPathways = commonPathways
+  )
+  
+  return(output)
 }
 
-common_features<- function(name= '') {
-  ## Genes
-  logreg_features <- ml_features$logistic_regression[1:1000]
-  rand_features <- ml_features$random_forest_classification[1:1000]
+common_pathways <- function(batch_cor, pathway_count = 100, gene_count = 1000, database=NULL, name=''){
+  ####################### Export the patchways
+  if(database=='uniprot') db<-'uniprot'
+  else if(database=="entrez") db<-'entrez'
+  else return(NULL)
+  gseDGE <- over_representation(gene_count, db)
+  gseLogreg <- over_representation(gene_count, db, 'logistic_regression')
+  gseForest <- over_representation(gene_count, db, 'random_forest_classification')
+  gseBatch <- over_representation(gene_count, db, dataframe = batch_cor)
   
-  gene_list <- stats_df$logFC
-  names(gene_list) <- rownames(stats_df)
-  gene_list <- names(sort(gene_list, decreasing=TRUE)[1:1000])
-  cor_list <- sv_df$logFC
-  names(cor_list) <- rownames(sv_df)
-  cor_list <- names(sort(cor_list, decreasing=TRUE)[1:1000])
+  ## Pathways
+  gseDGEPathways <- head(gseDGE@result[order(gseDGE@result$p.adjust, decreasing = FALSE), c("Description", "ID", "category", "p.adjust")], pathway_count)
+  gseLogregPathways <- head(gseLogreg@result[order(gseLogreg@result$p.adjust, decreasing = FALSE), c("Description", "ID", "category", "p.adjust")], pathway_count)
+  gseForestPathways <- head(gseForest@result[order(gseForest@result$p.adjust, decreasing = FALSE), c("Description", "ID", "category", "p.adjust")], pathway_count)
+  gseBatchPathways <- head(gseBatch@result[order(gseBatch@result$p.adjust, decreasing = FALSE), c("Description", "ID", "category", "p.adjust")], pathway_count)
   
-  commonFeatures <- Reduce(intersect, list(gene_list, logreg_features, rand_features, cor_list))
+  
+  commonPathways <- Reduce(intersect, list(
+    paste(gseDGEPathways$Description, gseDGEPathways$ID, gseDGEPathways$category, sep="||"),
+    paste(gseLogregPathways$Description, gseLogregPathways$ID, gseLogregPathways$category, sep="||"),
+    paste(gseForestPathways$Description, gseForestPathways$ID, gseForestPathways$category, sep="||"),
+    paste(gseBatchPathways$Description, gseBatchPathways$ID, gseBatchPathways$category, sep="||")
+  )) %>% c(., rep("NA||NA||NA", pathway_count-length(.)))
+  
+  listInput = list(DGE = gseDGEPathways$ID, LogReg = gseLogregPathways$ID, RandForest = gseForestPathways$ID, BatchCor = gseBatchPathways$ID)
   
   venn.diagram(
-    x = list(gene_list, logreg_features, rand_features, cor_list),
+    x = listInput,
+    category.names = c("DGE", "LogReg", "RandForest", "BatchCor"),
+    filename = paste(getwd(), '/output/Pathways_venn_diagramm_', name, '.png', sep=''),
+    main = paste(name, sep=''), #"Pathway-Level Overlap - ", 
+    output = FALSE,
+    disable.logging = TRUE,
+    
+    main.cex = 2.1,
+    main.fontface = "bold",
+    
+    # Numbers
+    cex = 2,
+    fontface = "bold",
+    fontfamily = "sans",
+    
+    
+    # Set names
+    cat.cex = 1.6,
+    cat.fontface = "bold",
+    cat.default.pos = "outer",
+    cat.fontfamily = "sans"
+  )
+  
+  plot <- upset(fromList(listInput), order.by = "freq")
+  ggsave(filename = paste(getwd(),'/output/upset/', name, '.png', sep = ''))
+  
+  output <- list(
+    DGEPathways = gseDGEPathways,
+    BatchPathways = gseBatchPathways,
+    ForestPathways = gseForestPathways,
+    LogregPathways = gseLogregPathways,
+    CommonPathways = commonPathways
+  )
+  
+  return(output)
+}
+
+common_features<- function(batch_cor, number=1000, name= '') {
+  gene_list_features <- stats_df$logFC
+  names(gene_list_features) <- stats_df$gene_id
+  gene_list_features <- names(sort(gene_list_features, decreasing = TRUE)[1:number])
+  
+  BatchCor <- batch_cor$logFC
+  names(BatchCor) <- batch_cor$gene_id
+  BatchCor <- names(sort(BatchCor, decreasing = TRUE)[1:number])
+  logreg <- ml_features$logreg_log2fc[1:number]
+  names(logreg) <- ml_features$logistic_regression[1:number]
+  logreg <- names(sort(logreg, decreasing = TRUE))
+  randforst <- ml_features$rf_log2fc[1:number]
+  names(randforst) <- ml_features$random_forest_classification[1:number]
+  randforst <- names(sort(randforst, decreasing = TRUE))
+  
+  commonFeatures <- Reduce(intersect, list(gene_list_features, logreg, randforst, BatchCor))
+  
+  listInput <- list(DGE = gene_list_features, LogReg = logreg, RandForest = randforst, BatchCor = BatchCor)
+  venn.diagram(
+    x = listInput,
     category.names = c("DGE", "LogReg", "RandForest", "BatchCor"),
     filename = paste(getwd(), '/output/Features_venn_diagramm_',name, '.png', sep=''),
+    main = paste(name, sep=''), #"Gene-Level Overlap - ", 
     output = FALSE,
-    disable.logging = TRUE
+    disable.logging = TRUE,
+    
+    main.cex = 2.1,
+    main.fontface = "bold",
+    
+    # Numbers
+    cex = 2,
+    fontface = "bold",
+    fontfamily = "sans",
+    
+    
+    # Set names
+    cat.cex = 1.6,
+    cat.fontface = "bold",
+    cat.default.pos = "outer",
+    cat.fontfamily = "sans"
   )
+  
+  plot <- upset(fromList(listInput), order.by = "freq")
+  ggsave(filename = paste(getwd(),'/output/upset/', name, '.png', sep = ''))
   
   return(commonFeatures)
 }
 
-common_Intersection <- function(commonWith, commonWithout){
+common_Intersection <- function(commonWith, commonWithout, method="kegg"){
   max_len <- max(
     length(commonWith),
     length(commonWithout)
@@ -312,11 +501,61 @@ common_Intersection <- function(commonWith, commonWithout){
   length(commonWithout) <- max_len
   
   commonIntersection = Reduce(intersect, list(commonWith, commonWithout))
-  
+  if(length(commonIntersection)==0){
+    if(method=="kegg") commonIntersection <- rep("NA||NA||NA", max_len-length(commonIntersection))
+    else commonIntersection <- rep(NA, max_len-length(commonIntersection))
+  } 
   return(commonIntersection)
 }
 
-export_common <- function(name="Common",commonWith, commonWithout, commonIntersection) {
+get_ontologie <- function(dataframe) {
+  dataframe <- dataframe %>% 
+    rowwise() %>% 
+    mutate(
+      Ancestor = paste(
+        switch(
+          ONTOLOGY, 
+          BP = as.character(GOBPANCESTOR[[ID]]), 
+          MF = as.character(GOMFANCESTOR[[ID]]), 
+          CC = as.character(GOCCANCESTOR[[ID]]), 
+          NA
+        ), collapse = ", "),
+    Parent = paste(
+      switch(
+        ONTOLOGY, 
+        BP = as.character(GOBPPARENTS[[ID]]), 
+        MF = as.character(GOMFPARENTS[[ID]]), 
+        CC = as.character(GOCCPARENTS[[ID]]), 
+        NA
+      ), collapse = ", "),
+    Children = paste(
+      switch(
+        ONTOLOGY, 
+        BP = as.character(GOBPCHILDREN[[ID]]), 
+        MF = as.character(GOMFCHILDREN[[ID]]), 
+        CC = as.character(GOCCCHILDREN[[ID]]), 
+        NA
+      ), collapse = ", ")
+    )
+  
+  return(dataframe)
+}
+
+get_ontology_counts <- function(ontology_list){
+  vector_counts <- unlist(strsplit(ontology_list, ", "))
+  vector_counts <- vector_counts[!is.na(vector_counts) & vector_counts != "" & vector_counts != "all" & vector_counts != "NA"]
+  ontology_counts <- table(vector_counts)
+  if(length(ontology_counts)==0) return(data.frame(GO_ID=NA, Count=NA))
+  else {
+    counts_df <- as.data.frame(ontology_counts)
+    colnames(counts_df) <- c("GO_ID", "Count")
+    counts_df <- counts_df[order(-counts_df$Count), ]
+    
+    return(counts_df)
+  }
+}
+
+export_common <- function(commonWith, commonWithout, commonIntersection, BooleanPathways, name="Common", method="kegg") {
   uncommonCommon <- setdiff(union(commonWith, commonWithout), commonIntersection)
   uncommonCommonWith <- setdiff(commonWith, commonIntersection)
   uncommonCommonWithout <- setdiff(commonWithout, commonIntersection)
@@ -329,6 +568,17 @@ export_common <- function(name="Common",commonWith, commonWithout, commonInterse
     length(uncommonCommonWith),
     length(uncommonCommonWithout)
   )
+  if(length(uncommonCommon)==0 || length(uncommonCommonWith)==0 || length(uncommonCommonWithout)==0){
+    if(method=="kegg"){
+      uncommonCommon <- rep("NA||NA||NA", max_len-length(uncommonCommon))
+      uncommonCommonWith <- rep("NA||NA||NA", max_len-length(uncommonCommonWith))
+      uncommonCommonWithout <- rep("NA||NA||NA", max_len-length(uncommonCommonWithout))
+    } else {
+      uncommonCommon <- rep(NA, max_len-length(uncommonCommon))
+      uncommonCommonWith <- rep(NA, max_len-length(uncommonCommonWith))
+      uncommonCommonWithout <- rep(NA, max_len-length(uncommonCommonWithout))
+    }
+  }
   length(commonWith) <- max_len
   length(commonWithout) <- max_len
   length(commonIntersection) <- max_len
@@ -336,65 +586,316 @@ export_common <- function(name="Common",commonWith, commonWithout, commonInterse
   length(uncommonCommonWith) <- max_len
   length(uncommonCommonWithout) <- max_len
   
-  output <- data.frame(
+  if(BooleanPathways && method=="kegg") {
+    commonWith <- data.frame(do.call(rbind, strsplit(commonWith, "\\|\\|")))
+    colnames(commonWith) <- c("Description", "ID", "ONTOLOGY")
+    commonWithout <- data.frame(do.call(rbind, strsplit(commonWithout, "\\|\\|")))
+    colnames(commonWithout) <- c("Description", "ID", "ONTOLOGY")
+    commonIntersection <- data.frame(do.call(rbind, strsplit(commonIntersection, "\\|\\|")))
+    colnames(commonIntersection) <- c("Description", "ID", "ONTOLOGY")
+    uncommonCommon <- data.frame(do.call(rbind, strsplit(uncommonCommon, "\\|\\|")))
+    colnames(uncommonCommon) <- c("Description", "ID", "ONTOLOGY")
+    uncommonCommonWith <- data.frame(do.call(rbind, strsplit(uncommonCommonWith, "\\|\\|")))
+    colnames(uncommonCommonWith) <- c("Description", "ID", "ONTOLOGY")
+    uncommonCommonWithout <- data.frame(do.call(rbind, strsplit(uncommonCommonWithout, "\\|\\|")))
+    colnames(uncommonCommonWithout) <- c("Description", "ID", "ONTOLOGY")
+    
+    commonWith <- get_ontologie(commonWith) %>% mutate(across(everything(), ~na_if(., "NA")))
+    commonWithout <- get_ontologie(commonWithout) %>% mutate(across(everything(), ~na_if(., "NA")))
+    commonIntersection <- get_ontologie(commonIntersection) %>% mutate(across(everything(), ~na_if(., "NA")))
+    uncommonCommon <- get_ontologie(uncommonCommon) %>% mutate(across(everything(), ~na_if(., "NA")))
+    uncommonCommonWith <- get_ontologie(uncommonCommonWith) %>% mutate(across(everything(), ~na_if(., "NA")))
+    uncommonCommonWithout <- get_ontologie(uncommonCommonWithout) %>% mutate(across(everything(), ~na_if(., "NA")))
+  }
+  
+  output <- list(
     CommonWith = commonWith,
     CommonWithout = commonWithout,
     CommonIntersection = commonIntersection,
-    Uncommen = uncommonCommon,
+    Uncommon = uncommonCommon,
     UncommonWith = uncommonCommonWith,
     UncommonWithout = uncommonCommonWithout
   )
   write.csv(output, file=paste(getwd(),'/output/', name, '.csv', sep = ''), row.names = F)
+  
+  if(BooleanPathways) return(output)
 }
 
-# Mit outlier
+export_ontology_counts <- function(dataframe, name="Counts"){
+  cols <- list(
+    CommonWithAncestor=dataframe$CommonWith$Ancestor, CommonWithParent=dataframe$CommonWith$Parent, CommonWithChildren=dataframe$CommonWith$Children,
+    CommonWithoutAncestor=dataframe$CommonWithout$Ancestor, CommonWithoutParent=dataframe$CommonWithout$Parent, CommonWithoutChildren=dataframe$CommonWithout$Children,
+    CommonIntersectionAncestor=dataframe$CommonIntersection$Ancestor, CommonIntersectionParent=dataframe$CommonWith$Parent, CommonIntersectionChildren=dataframe$CommonWith$Children,
+    UncommonAncestor=dataframe$Uncommon$Ancestor, UncommonParent=dataframe$Uncommon$Parent, UncommonChildren=dataframe$Uncommon$Children,
+    UncommonWithAncestor=dataframe$UncommonWith$Ancestor, UncommonWithParent=dataframe$UncommonWith$Parent, UncommonWithChildren=dataframe$UncommonWith$Children,
+    UncommonWithoutAncestor=dataframe$UncommonWithout$Ancestor, UncommonWithoutParent=dataframe$UncommonWithout$Parent, UncommonWithoutChildren=dataframe$UncommonWithout$Children
+  )
+  
+  # apply over all rows
+  results <- lapply(cols, get_ontology_counts)
+  
+  # set name
+  #names(results) <- gsub("\\.", "", cols)
+  
+  max_len <- max(sapply(results, nrow))
+  
+  results <- lapply(results, function(dataframe, max_len){
+    n_missing <- max_len - nrow(dataframe)
+    if(n_missing >0) {
+      dataframe <- rbind(dataframe, data.frame(
+        GO_ID = rep(NA, n_missing),
+        Count = rep(NA, n_missing)
+      ))
+    }
+    return(dataframe)
+  }, max_len=max_len)
+  
+  write.csv(results, file=paste(getwd(),'/output/', name, '.csv', sep = ''), row.names = F)
+  return(results)
+}
+
+
+####################
+
+
+gene_number <- 1000
+pathway_number <- 100
+top_pathway <- 50
+gene_set_df <- msigdbr(species = 'Homo sapiens')
+
+### Preparation
+## With Outlier
 load_data()
 stats_df <- differential_expression()
-commonPathwaysWith <- common_pathways('with')
-commonFeaturesWith <- common_features('with')
+# Gene List
+gene_list_with <- stats_df$logFC
+names(gene_list_with) <- stats_df$gene_id
+gene_list_with <- names(sort(gene_list_with, decreasing = TRUE)[1:gene_number])
+# Batch Correction
+batch_cor_with <- batch_correction()
+BatchCorWith <- batch_cor_with$logFC
+names(BatchCorWith) <- batch_cor_with$gene_id
+BatchCorWith <- names(sort(BatchCorWith, decreasing = TRUE)[1:gene_number])
+# Logistic Regression
+logreg_with <- ml_features$logreg_log2fc[1:gene_number]
+names(logreg_with) <- ml_features$logistic_regression[1:gene_number]
+logreg_with <- names(sort(logreg_with, decreasing = TRUE))
+# Random Forest
+randforst_with <- ml_features$rf_log2fc[1:gene_number]
+names(randforst_with) <- ml_features$random_forest_classification[1:gene_number]
+randforst_with <- names(sort(randforst_with, decreasing = TRUE))
+# Common Pathways
+commonPathwaysWith <- fora_common_pathways(batch_cor_with, pathway_number, gene_number, 'Pathway-Level - With Outlier')
+# Common Features
+commonFeaturesWith <- common_features(batch_cor_with, name='Feature-Level - With Outlier')
 
-# Ohne Outlier
+## Without Outlier
 load_data(FALSE)
 stats_df <- differential_expression()
-commonPathwaysWithout <- common_pathways('without')
-commonFeaturesWithout <- common_features('without')
+# Gene List
+gene_list_without <- stats_df$logFC
+names(gene_list_without) <- stats_df$gene_id
+gene_list_without <- names(sort(gene_list_without, decreasing = TRUE)[1:gene_number])
+# Batch Correction
+batch_cor_without <- batch_correction()
+BatchCorWithout <- batch_cor_without$logFC
+names(BatchCorWithout) <- batch_cor_without$gene_id
+BatchCorWithout <- names(sort(BatchCorWithout, decreasing = TRUE)[1:gene_number])
+# Logistic Regression
+logreg_without <- ml_features$logreg_log2fc[1:gene_number]
+names(logreg_without) <- ml_features$logistic_regression[1:gene_number]
+logreg_without <- names(sort(logreg_without, decreasing = TRUE))
+# Random Forest
+randforst_without <- ml_features$rf_log2fc[1:gene_number]
+names(randforst_without) <- ml_features$random_forest_classification[1:gene_number]
+randforst_without <- names(sort(randforst_without, decreasing = TRUE))
+# Common Pathways
+commonPathwaysWithout <- fora_common_pathways(batch_cor_without, pathway_number, gene_number, 'Pathway-Level - Without Outlier')
+# Common Features
+commonFeaturesWithout <- common_features(batch_cor_without, name='Feature-Level - Without Outlier')
 
-commonPathwayIntersection <- common_Intersection(commonPathwaysWith, commonPathwaysWithout)
+##########
+
+## Pathway and Feature Intersection
+commonPathwayIntersection <- common_Intersection(commonPathwaysWith$CommonPathways, commonPathwaysWithout$CommonPathways, method = "fora")
 commonFeatureIntersection <- common_Intersection(commonFeaturesWith, commonFeaturesWithout)
 
-# Pathways
-export_common('Common_Pathways', commonPathwaysWith, commonPathwaysWithout, commonPathwayIntersection)
-export_common('Common_Features', commonFeaturesWith, commonFeaturesWithout, commonFeatureIntersection)
-###################### GSEA
+## Export
+outputPathways = export_common(commonPathwaysWith$CommonPathways, commonPathwaysWithout$CommonPathways, commonPathwayIntersection, BooleanPathways = TRUE, name='Common_Pathways', method = "fora")
+export_common(commonFeaturesWith, commonFeaturesWithout, commonFeatureIntersection, BooleanPathways = FALSE, name='Common_Features')
+Genes <- data.frame(
+  DGEWith = gene_list_with,
+  BatchWith = BatchCorWith,
+  LogRegWith = logreg_with,
+  RandForestWith = randforst_with,
+  DGEWithout = gene_list_without,
+  BatchWithout = BatchCorWithout,
+  LogRegWithout = logreg_without,
+  RandForestWithout = randforst_without
+)
+write.csv(Genes, file=paste(getwd(),'/output/', 'Genes', '.csv', sep = ''), row.names = F)
 
-#gse <- enrichment_analysis(1000)
- 
-#require(DOSE)
-#dotplot(gse, showCategory=10, split=".sign") + facet_grid(.~.sign)
+####################
 
-#edox2 <- pairwise_termsim(gse)
-#p1 <- treeplot(edox2)
-#p2 <- treeplot(edox2, hclust_method="average")
-#aplot::plot_list(p1, p2, tag_levels = 'A')
+### Downstream Analysis
+# Prepare and Count Features
+all_features_with <- c(gene_list_with, BatchCorWith, logreg_with, randforst_with)
+all_features_without <- c(gene_list_without, BatchCorWithout, logreg_without, randforst_without)
+all_features <- union(all_features_with, all_features_without)
+counts_with <- table(all_features_with)
+counts_without <- table(all_features_without)
 
-#clusterProfiler::emapplot(edox2, showCategory = 10)
+get_unique <- function(lst, counts) {
+  return(lst[counts[lst] == 1])
+}
 
+# Unique Features per method
+DGEWith <- get_unique(gene_list_with, counts_with)
+DGEWithout <- get_unique(gene_list_without, counts_without)
+BatchWith <- get_unique(BatchCorWith, counts_with)
+BatchWithout <- get_unique(BatchCorWithout, counts_without)
+LogRegWith <- get_unique(logreg_with, counts_with)
+LogRegWithout <- get_unique(logreg_without, counts_without)
+RandWith <- get_unique(randforst_with, counts_with)
+RandWithout <- get_unique(randforst_without, counts_without)
 
-#ridgeplot(gse) + labs(x = "enrichment distribution")
+# Overlaps and Differences
+common_with <- Reduce(intersect, list(gene_list_with, BatchCorWith, logreg_with, randforst_with))
+common_without <- Reduce(intersect, list(gene_list_without, BatchCorWithout, logreg_without, randforst_without))
+complete_overlap <- intersect(common_with, common_without)
+complete_difference <- setdiff(union(common_with, common_without), complete_overlap)
+DGE_overlap <- intersect(DGEWith, DGEWithout)
+DGE_difference <- setdiff(union(DGEWith, DGEWithout), DGE_overlap)
+BatchCor_overlap <- intersect(BatchWith, BatchWithout)
+BatchCor_difference <- setdiff(union(BatchWith, BatchWithout), BatchCor_overlap)
+LogReg_overlap <- intersect(LogRegWith, LogRegWithout)
+LogReg_difference <- setdiff(union(LogRegWith, LogRegWithout), LogReg_overlap)
+RandForest_overlap <- intersect(RandWith, RandWithout)
+RandForest_difference <- setdiff(union(RandWith, RandWithout), RandForest_overlap)
 
-##################### ORA
-#enrich <- over_representation(1000)
-#enrich <- over_representation(1000, 'logistic_regression')
-#enrich <- over_representation(1000, 'random_forest_classification')
-#upsetplot(enrich)
+##########
 
-#barplot(enrich,
-#        drop = TRUE,
-#        showCategory = 10,
-#        title = "GO Biological Pathways",
-#        font.size = 8)
+## ORA - Overlap/Differemce between the methods
+#ora_complete_overlap <- fora_analysis(length(complete_overlap), name_vector = complete_overlap)
+#pathways_complete_overlap <- head(ora_complete_overlap$pathway[order(ora_complete_overlap$padj, decreasing = FALSE)], 50)
+#ora_complete_difference <- fora_analysis(length(complete_difference), name_vector = complete_difference)
+#pathways_complete_difference <- head(ora_complete_difference$pathway[order(ora_complete_difference$padj, decreasing = FALSE)], 50)
+#ora_DGE_difference <- fora_analysis(length(DGE_difference), name_vector = DGE_difference)
+#pathways_DGE_difference <- head(ora_DGE_difference$pathway[order(ora_DGE_difference$padj, decreasing = FALSE)], 50)
+#ora_BatchCor_difference <- fora_analysis(length(BatchCor_difference), name_vector = BatchCor_difference)
+#pathways_BatchCor_difference <- head(ora_BatchCor_difference$pathway[order(ora_BatchCor_difference$padj, decreasing = FALSE)], 50)
+#ora_LogReg_overlap <- fora_analysis(length(LogReg_overlap), name_vector = LogReg_overlap)
+#pathways_LogReg_overlap <- head(ora_LogReg_overlap$pathway[order(ora_LogReg_overlap$padj, decreasing = FALSE)], 50)
+#ora_LogReg_difference <- fora_analysis(length(LogReg_difference), name_vector = LogReg_difference)
+#pathways_LogReg_difference <- head(ora_LogReg_difference$pathway[order(ora_LogReg_difference$padj, decreasing = FALSE)], 50)
+#ora_RandForest_overlap <- fora_analysis(length(RandForest_overlap), name_vector = RandForest_overlap)
+#pathways_RandForest_overlap <- head(ora_RandForest_overlap$pathway[order(ora_RandForest_overlap$padj, decreasing = FALSE)], 50)
+#ora_RandForest_difference <- fora_analysis(length(RandForest_difference), name_vector = RandForest_difference)
+#pathways_RandForest_difference <- head(ora_RandForest_difference$pathway[order(ora_RandForest_difference$padj, decreasing = FALSE)], 50)
 
-#dotplot(enrich)
-######################
+#pathway_output <- data.frame(
+#  complete_overlap = pathways_complete_overlap,
+#  complete_difference = pathways_complete_difference,
+#  DGE_difference = pathways_DGE_difference,
+#  BatchCor_difference = pathways_BatchCor_difference,
+#  LogReg_overlap = pathways_LogReg_overlap,
+#  LogReg_difference = pathways_LogReg_difference,
+#  RandForest_overlap = pathways_RandForest_overlap,
+#  RandForest_difference = pathways_RandForest_difference
+#)
+#write.csv(pathway_output, file=paste(getwd(),'/output/', 'pathways', '.csv', sep = ''), row.names = F)
 
-######################
+##########
+
+## DO Analysis - Per Method
+# With Outlier
+#DO_DGE_with <- do_enrichment(1000, name = 'DGE_with')
+#DO_BatchCor_with <- do_enrichment(length(BatchCorWith), name_vector = BatchCorWith, name = 'BatchCor_with')
+#DO_LogReg_with <- do_enrichment(1000, ml_feature = 'logistic_regression', name = 'LogReg_with')
+#DO_RandForest_with <- do_enrichment(1000, ml_feature = 'random_forest_classification', name = 'RandForest_with')
+#commonFeaturesWith <- common_features(batch_cor_with, name='With Outlier')
+
+# Without Outlier
+#DO_DGE_without <- do_enrichment(1000, name = 'DGE_without')
+#DO_BatchCor_without <- do_enrichment(length(BatchCorWith), name_vector = BatchCorWithout, name = 'BatchCor_without')
+#DO_LogReg_without <- do_enrichment(1000, ml_feature = 'logistic_regression', name = 'LogReg_without')
+#DO_RandForest_without <- do_enrichment(1000, ml_feature = 'random_forest_classification', name = 'RandForest_without')
+#commonFeaturesWithout <- common_features(batch_cor_without, name='Without Outlier')
+
+####
+
+## DO Analysis - Overlaps and Differences
+#DO_common_with <- do_enrichment(length(common_with), name_vector = common_with, name = 'common_with')
+#DO_common_without <- do_enrichment(length(common_without), name_vector = common_without, name = 'common_without')
+#DO_complete_overlap <- do_enrichment(length(complete_overlap), name_vector = complete_overlap, name = 'complete_overlap')
+#DO_complete_difference <- do_enrichment(length(complete_difference), name_vector = complete_difference, name = 'complete_difference')
+#DO_DGE_difference <- do_enrichment(length(DGE_difference), name_vector = DGE_difference, name = 'DGE_difference')
+#DO_BatchCor_difference <- do_enrichment(length(BatchCor_difference), name_vector = BatchCor_difference, name = 'BatchCor_difference')
+#DO_LogReg_overlap <- do_enrichment(length(LogReg_overlap), name_vector = LogReg_overlap, name = 'LogReg_overlap')
+#DO_LogReg_difference <- do_enrichment(length(LogReg_difference), name_vector = LogReg_difference, name = 'LogReg_difference')
+#DO_RandForest_overlap <- do_enrichment(length(RandForest_overlap), name_vector = RandForest_overlap, name = 'RandForest_overlap')
+#DO_RandForest_difference <- do_enrichment(length(RandForest_difference), name_vector = RandForest_difference, name = 'RandForest_difference')
+
+###
+
+## DO Analysis - Results
+#get_do_results <- function(enrichResult, number=10) {
+#  return(head(enrichResult@result$Description[order(enrichResult@result$p.adjust)], number))
+#}
+
+#DO_DGE_with_result <- get_do_results(DO_DGE_with)
+#DO_DGE_without_result <- get_do_results(DO_DGE_without)
+#DO_BatchCor_with_result <- get_do_results(DO_BatchCor_with)
+#DO_BatchCor_without_result <- get_do_results(DO_BatchCor_without)
+#DO_LogReg_with_result <- get_do_results(DO_LogReg_with)
+#DO_LogReg_without_result <- get_do_results(DO_LogReg_without)
+#DO_RandForest_with_result <- get_do_results(DO_RandForest_with)
+#DO_RandForest_without_result <- get_do_results(DO_RandForest_without)
+
+#DO_common_with_result <- get_do_results(DO_common_with)
+#DO_common_without_result <- get_do_results(DO_common_without)
+#DO_complete_overlap_result <- get_do_results(DO_complete_overlap)
+#DO_complete_difference_result <- get_do_results(DO_complete_difference)
+#DO_DGE_difference_result <- get_do_results(DO_DGE_difference)
+#DO_BatchCor_difference_result <- get_do_results(DO_BatchCor_difference)
+#DO_LogReg_overlap_result <- get_do_results(DO_LogReg_overlap)
+#DO_LogReg_difference_result <- get_do_results(DO_LogReg_difference)
+#DO_RandForest_overlap_result <- get_do_results(DO_RandForest_overlap)
+#DO_RandForest_difference_result <- get_do_results(DO_RandForest_difference)
+
+#DO_output = data.frame(
+#  DGE_with = DO_DGE_with_result,
+#  DGE_without = DO_DGE_without_result,
+#  BatchCor_with = DO_BatchCor_with_result,
+#  BatchCor_without = DO_BatchCor_without_result,
+#  LogReg_with = DO_LogReg_with_result,
+#  LogReg_without = DO_LogReg_without_result,
+#  RandForest_with = DO_RandForest_with_result,
+#  RandForest_without = DO_RandForest_without_result,
+#  common_with = DO_common_with_result,
+#  common_without = DO_common_without_result,
+#  complete_overlap = DO_complete_overlap_result,
+#  complete_difference = DO_complete_difference_result,
+#  DGE_difference = DO_DGE_difference_result,
+#  BatchCor_difference = DO_BatchCor_difference_result,
+#  LogReg_overlap = DO_LogReg_overlap_result,
+#  LogReg_difference = DO_LogReg_difference_result,
+#  RandForest_overlap = DO_RandForest_overlap_result,
+#  RandForest_difference = DO_RandForest_difference_result
+#)
+#write.csv(DO_output, file=paste(getwd(),'/output/', 'DO', '.csv', sep = ''), row.names = F)
+
+#################### Not further used
+
+# keggg/uniprot/GO
+# With Outlier
+#load_data()
+#stats_df <- differential_expression()
+#batch_cor_with <- batch_correction()
+#commonPathwaysWith <- common_pathways(batch_cor_with, 100, 1000, 'uniprot', 'with')
+
+# Without Outlier
+#load_data(FALSE)
+#stats_df <- differential_expression()
+#batch_cor_without <- batch_correction()
+#commonPathwaysWithout <- common_pathways(batch_cor_without, 100, 1000, 'uniprot', 'without')
