@@ -99,7 +99,6 @@ def read_excel_file(directory):
                     # Use pd.read_excel to read the file and append the DataFrame to the list
                     dataframe = pd.read_excel(file_path)
                     
-                    #dataframe = dataframe.drop(columns=["trans_name", "gene_name", "gene_id_ver"], errors='ignore')
                     prepared_dataframe = prepare_dataframe(dataframe)
                     prepared_dataframe[f"gene_name_{folder}"] = prepared_dataframe["gene_name"]
                     prepared_dataframe[f"trans_id_ver_{folder}"] = prepared_dataframe["trans_id_ver"]
@@ -210,7 +209,6 @@ def heatmap(dataframe, output_path, output_name="heatmap",top_var_genes_num=250,
         
         # Select the top x most variable genes based on variance
         # This will help in visualizing the most variable genes in the heatmap
-        #top_var_genes = expression_filtered[srr_columns].var(axis=1).sort_values(ascending=False).head(top_var_genes_num).index
         top_var_genes = expression_filtered.var(axis=1).sort_values(ascending=False).head(top_var_genes_num).index
         heatmap_data = expression_filtered.loc[top_var_genes]
         num_rows, num_cols = heatmap_data.shape
@@ -227,8 +225,6 @@ def heatmap(dataframe, output_path, output_name="heatmap",top_var_genes_num=250,
                             'x': 'Sample (SRR)',
                             'y': 'Genes (gene_name)',
                             'color': 'log2(TPM + 1)'},
-                        #x=heatmap_data[srr_columns].columns,
-                        #y=heatmap_data["gene_name"],
                         color_continuous_scale='viridis',
                         title=f'Heatmap of Gene Expression Levels (Top {top_var_genes_num} Most Variable Genes with an expression level >= {expression})',
                         aspect='auto')
@@ -684,7 +680,6 @@ def plot_logistic_regression(logreg_result, output_path, output_name="logistic_r
         # Create the heatmap
         plt.figure(figsize=(16, 9))
         sns.heatmap(pd.DataFrame(logreg_result['cnf_matrix'], index=class_names, columns=class_names), annot=True, cmap="YlGnBu", fmt='g')
-        #ax.xaxis.set_label_position("top")
         plt.title('Confusion matrix')
         plt.ylabel('Actual label')
         plt.xlabel('Predicted label')
@@ -774,7 +769,6 @@ def plot_feature_importance(algorithm_result, output_path, output_name="feature_
                 })
                 
                 # Sort the DataFrame by coefficients in descending order     
-                #feature_importance_df = feature_importance_df[feature_importance_df['Coefficient'] != 0]
                 feature_importance_df = feature_importance_df.sort_values(by='Coefficient', ascending=False)
                 
                 plt.figure(figsize=(15, 9))
@@ -795,7 +789,6 @@ def plot_feature_importance(algorithm_result, output_path, output_name="feature_
                 })
 
                 # Sort the DataFrame by feature_importance in descending order     
-                #feature_importance_df = feature_importance_df[feature_importance_df['Importance'] != 0]
                 feature_importance_df = feature_importance_df.sort_values(by='Feature Importance', ascending=False)
 
                 plt.figure(figsize=(15, 9))
@@ -846,10 +839,11 @@ def plot_perm_importance(algorithm_result, output_path, output_name="permutation
     if show: 
         plt.show()
 
-def calc_log2fc(dataframe, metadata):
+def calc_log2fc(dataframe, metadata, output=False):
     """
     input: dataframe (DataFrame): The DataFrame containing gene expression data.
     input: metadata (DataFrame): The metadata DataFrame containing sample information.
+    output (bool): Whether to save the log2 fold change results to a CSV file (default is False).
     output: Series: A Series containing the log2 fold change (Log2FC) values
 
     Calculates the log2 fold change (Log2FC) between normal and tumor samples in the given DataFrame.
@@ -862,7 +856,7 @@ def calc_log2fc(dataframe, metadata):
     result_df["Tumor"] = dataframe[tumor_runs].mean(axis=1)
     result_df["Log2FC"] = np.log2(result_df["Normal"]+1) - np.log2(result_df["Tumor"]+1)
     
-    #result_df.to_csv("log2fc_results.csv", index=True)
+    if output: result_df.to_csv("log2fc_results.csv", index=True)
     return result_df["Log2FC"]
 
 # Main function to execute the script
@@ -889,8 +883,7 @@ def main():
             print("No DataFrames to merge or an error occurred during merging.")
             return
     elif input_choice == '2':
-        
-        #dataframe_path = input("Enter the file path: ")2 
+        #dataframe_path = input("Enter the file path: ")
         dataframe_path = os.path.join(current_path,"data","merged_data.csv.gz")
         # Read the DataFrame from the specified path
         print(f"Reading DataFrame from {dataframe_path}...")
@@ -915,7 +908,8 @@ def main():
     #metadata_path = input("Enter the metadata file path: ")
     print(f"Reading metadata from {metadata_path}...")
 
-    #Mega = pd.read_csv(os.path.join(current_path, "Mega.csv"))
+    # Die folgenden 3 Zeilen sind nur notwendig, wenn die metadaten nochmal neu gemerged werden müssen
+    # Beachte: Weiter unten, wird die Metadatei angepasst, ebenfalls dann auskommentieren
     #Datasets = pd.read_csv(os.path.join(current_path, "Datasets.csv"))
     #metadata = pd.merge(Mega, Datasets, left_on="GEO_Series", right_on="GEO_Series", how="left")
     #metadata = metadata.rename(columns={"Run": "Run", "GEO_Series": "GEO_Series", "group": "group"})
@@ -931,45 +925,54 @@ def main():
     excluded_series = [""] #GSE144269
     excluded_runs = metadata[metadata['GEO_Series'].isin(excluded_series)]['Run'].unique()
     print(f"Excluding runs from GEO Series: {excluded_series}")
-    
     dataframe = merged_dataframes.drop(columns=excluded_runs, errors='ignore').reset_index()
 
     srr_columns = [col for col in dataframe.columns if col.startswith("SRR")]
+    # Falls man sich für nur für den exludierten Run interessiert:
+    #srr_columns = [col for col in excluded_runs if col.startswith("SRR")]
+
+    # Folgende 4 bzw. 5 Zeilen erstellen die Counts Datei für R
     #dataframe["gene_id"] = dataframe["gene_id_ver"].str.split(".").str[0]
     #R_counts = dataframe[["gene_id"] + srr_columns].copy().set_index("gene_id")
+    #R_counts = R_counts.apply(lambda x: np.log2(x + 1))  # Log2 transformation
     #R_counts.to_csv(os.path.join(current_path, "R-Project", "data", "merged_data_R.csv.gz"), index=True, compression="gzip")
     #breakpoint()
+
     dataframe_prepared = dataframe[["gene_id_ver"]+ srr_columns].copy().set_index("gene_id_ver")
-    #dataframe_prepared = dataframe[["gene_name"]+ srr_columns].copy().set_index("gene_name")
 
 
     
 
     metadata = metadata[metadata['Run'].isin(srr_columns)].copy()
+    # Anpassung der Metadaten, falls oben neu gemerged wird
     #metadata["Tumor_Status"] = metadata["group"].apply(label_group)
     #metadata = metadata[["Run", "Tumor_Status", "GEO_Series"]].copy()
     #metadata.to_csv(os.path.join(current_path, "data", "metadata.csv.gz"), index=False, compression="gzip")
 
+    # Speichern der Metadaten für R
     #R_meta = metadata[["Run", "Tumor_Status"]].copy().set_index("Run")
     #R_meta.to_csv(os.path.join(current_path, "R-Project", "data", "merged_metadata.csv"), index=True)
+
+
     # Apply log2 transformation to the expression data
     # This transformation is commonly used in gene expression analysis to normalize the data
     dataframe_log = dataframe_prepared.apply(lambda x: np.log2(x + 1))
+
     # Apply z-score normalization to the log2 transformed DataFrame
     # This normalization will standardize the data to have mean=0 and variance=1
     # This is important for downstream analyses such as PCA
     dataframe_scaled = dataframe_log.apply(zscore, axis=0)
     print("DataFrame prepared successfully.")
 
-    #output_path = os.path.join(current_path, "output")
-    #print(output_path)
+    output_path = os.path.join(current_path, "output")
+    
     # Create a heatmap from the DataFrame
     #heatmap(dataframe_log, output_path, output_name="heatmap_with_outlier", top_var_genes_num=1000, method='seaborn')
     #heatmap(dataframe_log, output_path, output_name="heatmap_without_outlier", top_var_genes_num=1000, method='seaborn')
     
     # Perform PCA on the DataFrame
     #pca(dataframe_scaled, metadata, output_path, output_name="pca_with_outlier", show_geo=True)
-    #pca(dataframe_scaled, metadata, output_path, output_name="pca_without_outlier", show_geo=True)
+    #pca(dataframe_scaled, metadata, output_path, output_name="pca_without_outlier", show_geo=False)
 
     # Create a distribution plot from the DataFrame
     #distribution_plot(dataframe_scaled, metadata, output_path, output_name="distribution_plot_with_outlier")
@@ -987,17 +990,20 @@ def main():
         'Odds Ratio': logreg_result['odds_ratios']
     })
     logreg_df = logreg_df.sort_values(by='Coefficient', ascending=False)
-    #print(f"Top 10 genes with highest coefficients:\n{logreg_df.head(10)}")
+    print(f"Top 10 genes with highest coefficients:\n{logreg_df.head(10)}")
     #print(f"Top 10 genes with lowest coefficients:\n{logreg_df.sort_values(by='Coefficient', ascending=True).head(10)}")
     #plot_logistic_regression(logreg_result, output_path, output_name="logreg_with_outlier")
     #plot_logistic_regression(logreg_result, output_path, output_name="logreg_without_outlier")
 
     # Perform decision tree analysis on the DataFrame
+    # Hat in der Arbeit keiner relevanz gehabt/wurde nicht genutzt
     #decision_tree_result = decision_tree(dataframe_scaled, metadata, method='gini')
     ######
     #plot_decision_tree(decision_tree_result, output_path, output_name="decision_tree_gini_with_outlier")
     #plot_decision_tree(decision_tree_result, output_path, output_name="decision_tree_gini_without_outlier")
+
 ##############
+
     # Perform random forest classification on the DataFrame
     rf_result = random_forest_classification(dataframe_scaled, metadata)
     rf_df = pd.DataFrame({
@@ -1005,7 +1011,7 @@ def main():
         'Feature Importance': rf_result['Feature Importance']
     })
     rf_df = rf_df.sort_values(by='Feature Importance', ascending=False)
-    #print(f"Top 10 genes with highest feature importance:\n{rf_df.head(10)}")
+    print(f"Top 10 genes with highest feature importance:\n{rf_df.head(10)}")
 
     # Export the results to CSV files
     log2fc = calc_log2fc(dataframe[["gene_id_ver"] + srr_columns], metadata)
@@ -1013,15 +1019,15 @@ def main():
     logreg = logreg_df.sort_values(by='Coefficient', ascending=False)['Gene'].reset_index(drop=True).str.split(".").str[0]
     randforest = rf_df.sort_values(by='Feature Importance', ascending=False)['Gene'].reset_index(drop=True).str.split(".").str[0]
     
-
-    ml_features = pd.DataFrame({
-        'logistic_regression': logreg,
-        'logreg_log2fc': log2fc[logreg].values,
-        'random_forest_classification': randforest,
-        'rf_log2fc': log2fc[randforest].values
-    })
-    print(ml_features.head(10))
-    ml_features.to_csv(os.path.join(current_path, "R-Project", "data", "ml_features.csv"), index=False)
+    # ml Features für R exportieren
+    #ml_features = pd.DataFrame({
+    #    'logistic_regression': logreg,
+    #    'logreg_log2fc': log2fc[logreg].values,
+    #    'random_forest_classification': randforest,
+    #    'rf_log2fc': log2fc[randforest].values
+    #})
+    #print(ml_features.head(10))
+    #ml_features.to_csv(os.path.join(current_path, "R-Project", "data", "ml_features.csv"), index=False)
 
     # Perform feature importance analysis
     #plot_feature_importance(logreg_result, output_path, output_name="fi_with_outlier", method="logistic_regression")
@@ -1030,10 +1036,251 @@ def main():
     #plot_feature_importance(rf_result, output_path, output_name="fi_without_outlier", method="random_forest_classification")
 
     # Perform permutation importance analysis
+    # Hat nicht funktioniert, wurde nicht genutzt
     #plot_perm_importance(logreg_result, output_path, output_name="permutation_importance_logistic_regression", show=True)
 
 
 
 if __name__ == '__main__':
     main()
+
+
+    # Sehr viel manuelles für Venn-Diagramme und Korrelation, teilweise abhängig von Dateien in R erzeugt
+    """
+    directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    GSE = ["GSE25599", "GSE77314", "GSE82177", "GSE101432", "GSE105130", "GSE114564", "GSE144269", "GSE148355"]
+    filename = "all.samples.tpm.xlsx"  # Name der Datei, die in jedem Ordner eingelesen werden soll
+    Genes_datasets = pd.DataFrame()
+    
+    for gse in GSE:
+        path = os.path.join(directory, gse, filename)
+        print(f"Reading file: {path}")
+        df = pd.read_excel(path)
+        df["gene_id"] = df['gene_id_ver'].str.split(".").str[0]
+        expr_cols = df.columns.difference(["trans_id_ver", "trans_name", "gene_id_ver", "gene_name", "gene_id"])
+        df = df[["gene_id"]].copy().assign(mean_expr=df[expr_cols].mean(axis=1, skipna=True))
+        df = df.groupby("gene_id", as_index=False)["mean_expr"].sum()
+        df = df.set_index("gene_id")
+        df = df.rename(columns={"mean_expr": gse})
+        if Genes_datasets.empty:
+            Genes_datasets = df
+        else:
+            Genes_datasets = Genes_datasets.join(df, how='outer')
+        print(Genes_datasets[gse][:5])  # Print the first 5 gene IDs to verify
+
+    print(Genes_datasets.head())
+    Genes_datasets.to_csv(os.path.join(directory, "Genes_datasets.csv"), index=True)
+    """
+
+
+    """
+    Genes = pd.read_csv("/home/laszl/Praxisphase/Phase 1/data/Genes.csv")
+    Genes_datasets = pd.read_csv(os.path.join(directory, "Genes_datasets.csv"), index_col=0)
+    Pathways = pd.read_csv(os.path.join(directory, "pathways.csv"))
+    Quality_Paths = pd.read_csv(os.path.join(directory, "pathways_positively_correlated_to_low_quality.tsv"), sep="\t")
+    Quality_Paths = Quality_Paths["pathway"].tolist()
+    print(Genes_datasets.head())
+    gene_mean_dict = Genes_datasets.mean(axis=1, skipna=True).to_dict()
+    DGEWith = Genes["DGEWith"].tolist() 
+    BatchWith = Genes["BatchWith"].tolist() 
+    LogRegWith = Genes["LogRegWith"].tolist() 
+    RandForestWith = Genes["RandForestWith"].tolist() 
+    DGEWithout = Genes["DGEWithout"].tolist() 
+    BatchWithout = Genes["BatchWithout"].tolist() 
+    LogRegWithout = Genes["LogRegWithout"].tolist() 
+    RandForestWithout = Genes["RandForestWithout"].tolist() 
+    all_genes_with = DGEWith + BatchWith + LogRegWith + RandForestWith
+    all_genes_without = DGEWithout + BatchWithout + LogRegWithout + RandForestWithout
+    Genes_with = [DGEWith, BatchWith, LogRegWith, RandForestWith]
+    Genes_without = [DGEWithout, BatchWithout, LogRegWithout, RandForestWithout]
+    common_with = list(set.intersection(*map(set, Genes_with)))
+    common_without = list(set.intersection(*map(set, Genes_without)))
+    print("Common genes with outlier:", len(common_with))
+    print("Common genes without outlier:", len(common_without))
+    common_DGE_BatchCor_with = list(set(DGEWith).intersection(set(BatchWith)) - set(common_with))
+    common_DGE_BatchCor_without = list(set(DGEWithout).intersection(set(BatchWithout)) - set(common_without))
+    common_Forest_LogReg_with = list(set(RandForestWith).intersection(set(LogRegWith)) - set(common_with))
+    common_Forest_LogReg_without = list(set(RandForestWithout).intersection(set(LogRegWithout)) - set(common_without))
+    common_Forest_Logreg_BatchCor_with = list(set(RandForestWith).intersection(set(LogRegWith)).intersection(set(BatchWith)) - set(common_with))
+    common_Forest_Logreg_BatchCor_without = list(set(RandForestWithout).intersection(set(LogRegWithout)).intersection(set(BatchWithout)) - set(common_without))
+    common_DGE_Forest_Logreg_with = list(set(DGEWith).intersection(set(RandForestWith)).intersection(set(LogRegWith)) - set(common_with))
+    common_DGE_Forest_Logreg_without = list(set(DGEWithout).intersection(set(RandForestWithout)).intersection(set(LogRegWithout)) - set(common_without))
+
+    counts_with = Counter(all_genes_with)
+    counts_without = Counter(all_genes_without)
+    UniqueDGEWith = [x for x in DGEWith if counts_with[x] == 1]
+    UniqueBatchWith = [x for x in BatchWith if counts_with[x] == 1]
+    UniqueLogRegWith = [x for x in LogRegWith if counts_with[x] == 1]
+    UniqueRandForestWith = [x for x in RandForestWith if counts_with[x] == 1]
+    UniqueDGEWithout = [x for x in DGEWithout if counts_without[x] == 1]
+    UniqueBatchWithout = [x for x in BatchWithout if counts_without[x] == 1]
+    UniqueLogRegWithout = [x for x in LogRegWithout if counts_without[x] == 1]
+    UniqueRandForestWithout = [x for x in RandForestWithout if counts_without[x] == 1]
+
+    complete_overlap = list(set(common_with).intersection(set(common_without)))
+    complete_difference = list(set(common_with).union(set(common_without)) - set(complete_overlap))
+    all_genes_overlap = list(set(all_genes_with).intersection(set(all_genes_without)))
+    all_genes_difference = list(set(all_genes_with).union(set(all_genes_without)) - set(all_genes_overlap))
+    print("Complete overlap genes:", len(complete_overlap))
+    print("Complete difference genes:", len(complete_difference))
+    #print(len(common_with), len(common_without), len(common_DGE_BatchCor_with), len(common_DGE_BatchCor_without))
+    #print(len(common_Forest_LogReg_with), len(common_Forest_LogReg_without), len(common_Forest_Logreg_BatchCor_with), len(common_Forest_Logreg_BatchCor_without))
+    #print(len(common_DGE_Forest_Logreg_with), len(common_DGE_Forest_Logreg_without))
+
+    #Batch_overlap = list(set(BatchWith).intersection(set(BatchWithout)))
+
+    # Correlation between different GEO-Series
+    #GEO = Genes_datasets.corr()
+    #sns.heatmap(GEO, annot=True, cmap="coolwarm", center=0)
+    #plt.title("Correlation between different GEO Series")
+    #plt.tight_layout()
+    #plt.show()
+    # Welche Pathways sind identisch
+    for path in Quality_Paths:
+        if path in Pathways["complete_overlap"].values:
+            print(f"Pathway {path} is in complete_overlap")
+        if path in Pathways["complete_difference"].values:
+            print(f"Pathway {path} is in complete_difference")
+        if path in Pathways["DGE_difference"].values:
+            print(f"Pathway {path} is in pathways_DGE_difference")
+        if path in Pathways["BatchCor_difference"].values:
+            print(f"Pathway {path} is in pathways_BatchCor_difference")
+        if path in Pathways["LogReg_overlap"].values:
+            print(f"Pathway {path} is in LogReg_overlap")
+        if path in Pathways["LogReg_difference"].values:
+            print(f"Pathway {path} is in LogReg_difference")
+        if path in Pathways["RandForest_overlap"].values:
+            print(f"Pathway {path} is in RandForest_overlap")
+        if path in Pathways["RandForest_difference"].values:
+            print(f"Pathway {path} is in RandForest_difference")
+
+    # Correlation between different GEO-Series and variables
+    DGE_overlap = list(set(UniqueDGEWith).intersection(set(UniqueDGEWithout)))
+    print(len(DGE_overlap))
+    DGE_difference = list(set(UniqueDGEWith).union(set(UniqueDGEWithout)) - set(set(UniqueDGEWith).intersection(set(UniqueDGEWithout))))
+    Batch_overlap = list(set(UniqueBatchWith).intersection(set(UniqueBatchWithout)))
+    print(len(Batch_overlap))
+    Batch_difference = list(set(UniqueBatchWith).union(set(UniqueBatchWithout)) - set(set(UniqueBatchWith).intersection(set(UniqueBatchWithout))))
+    LogReg_overlap = list(set(UniqueLogRegWith).intersection(set(UniqueLogRegWithout)))
+    LogReg_difference = list(set(UniqueLogRegWith).union(set(UniqueLogRegWithout)) - set(set(UniqueLogRegWith).intersection(set(UniqueLogRegWithout))))
+    RandForest_overlap = list(set(UniqueRandForestWith).intersection(set(UniqueRandForestWithout)))
+    RandForest_difference = list(set(UniqueRandForestWith).union(set(UniqueRandForestWithout)) - set(set(UniqueRandForestWith).intersection(set(UniqueRandForestWithout))))
+    #print(len(DGE_difference))
+    #print(len(Batch_difference))
+    #print(len(LogReg_overlap))
+    #print(len(LogReg_difference))
+    #print(len(RandForest_overlap))
+    #print(len(RandForest_difference))
+    correlation_variables_unique = {
+        "DGE (A)": DGE_overlap,
+        "DGE (B)": DGE_difference,
+        "BatchCor (A)": Batch_overlap,
+        "BatchCor (B)": Batch_difference,
+        "LogReg (A)": LogReg_overlap,
+        "LogReg (B)": LogReg_difference,
+        "RandForest (A)": RandForest_overlap,
+        "RandForest (B)": RandForest_difference,
+    }
+    correlation_variables_methods = {
+        "DGE (A)": DGEWith,
+        "DGE  (B)": DGEWithout,
+        "BatchCor (A)": BatchWith,
+        "BatchCor  (B)": BatchWithout,
+        "LogReg (A)": LogRegWith,
+        "LogReg  (B)": LogRegWithout,
+        "RandForest (A)": RandForestWith,
+        "RandForest  (B)": RandForestWithout,
+        "Common (A∩B)": complete_overlap,
+        "Uncommon (AΔB)": complete_difference
+    }
+    correlation_output_unique = pd.DataFrame()
+    correlation_output_methods = pd.DataFrame()
+    for variable_name, variable in correlation_variables_unique.items():
+        for gene_id in variable:
+            if gene_id not in gene_mean_dict:
+                print(f"Gene ID {gene_id} not found in gene_mean_dict.")
+        Gen_set = Genes_datasets.copy()
+        Gen_set[variable_name] = pd.Series({gene_id: gene_mean_dict[gene_id] for gene_id in variable})
+        GEO = Gen_set.corr()
+        correlation_output_unique[variable_name] = GEO[variable_name].drop(variable_name)
+    for variable_name, variable in correlation_variables_methods.items():
+        for gene_id in variable:
+            if gene_id not in gene_mean_dict:
+                print(f"Gene ID {gene_id} not found in gene_mean_dict.")
+        Gen_set = Genes_datasets.copy()
+        Gen_set[variable_name] = pd.Series({gene_id: gene_mean_dict[gene_id] for gene_id in variable})
+        GEO = Gen_set.corr()
+        correlation_output_methods[variable_name] = GEO[variable_name].drop(variable_name)
+    #variable = Batch_difference
+    #variable_name = 'Batch_difference'
+    #variable_title = 'the different Genes identified by Batch Correction with and without the outlier dataset'
+    #for gene_id in variable:
+    #    if gene_id not in gene_mean_dict:
+    #        print(f"Gene ID {gene_id} not found in gene_mean_dict.")
+    #Genes_datasets[variable_name] = pd.Series({gene_id: gene_mean_dict[gene_id] for gene_id in variable})
+    #GEO = Genes_datasets.corr()
+    #print(GEO[variable_name].drop(variable_name))
+    #print(GEO[variable_name])
+    output = pd.concat([correlation_output_unique, correlation_output_methods], axis=1)
+    #sns.set(font_scale=1.4)
+    fig, ax = plt.subplots(figsize=(26, 6))
+    sns.heatmap(correlation_output_unique.T, annot=True, cmap="coolwarm", center=0, annot_kws={"size": 30, "weight": "bold", "color": "black"})
+    plt.title("Method-Specific Feature Sets - Consistently (A) vs. Variably (B) Identified", fontsize=30, weight="bold")
+    plt.xticks(rotation=0, fontsize=23, weight="bold")
+    plt.yticks(fontsize=30, weight="bold")
+    plt.tight_layout()
+    plt.savefig(os.path.join(directory, "correlation_unique.png"))
+    #plt.show()
+    fig, ax = plt.subplots(figsize=(26, 7.5))
+    sns.heatmap(correlation_output_methods.T, annot=True, cmap="coolwarm", center=0, annot_kws={"size": 30, "weight": "bold", "color": "black"})
+    plt.title("Method-Derived Feature Sets - With (A) vs. Without (B) Outlier", fontsize=30, weight="bold")
+    plt.xticks(rotation=0, fontsize=23, weight="bold")
+    plt.yticks(fontsize=30, weight="bold")
+    plt.tight_layout()
+    plt.savefig(os.path.join(directory, "correlation_method.png"))
+    #plt.show()
+    """
+
+    """
+    variable_name = 'all_genes_difference'
+    variable = all_genes_difference
+    blob = []
+    for gse in Genes_datasets:
+        blob += list(Genes_datasets[gse].dropna())
+    myset = set(blob)
+    converter = {}
+    counter = 0
+    for item in myset:
+        converter[item] = counter
+        counter += 1
+    converted_Geneset = {}
+    Genes_datasets_corr = pd.DataFrame(Genes_datasets)
+    Genes_datasets_corr[variable_name] = pd.Series(variable)
+    for gse in Genes_datasets_corr:
+        converted_Geneset[gse] = []
+        for gene in Genes_datasets_corr[gse].dropna():
+            converted_Geneset[gse].append(converter[gene])
+
+    converted_Geneset = pd.DataFrame.from_dict(converted_Geneset, orient='index').transpose()
+    corr = converted_Geneset.corr()
+    sns.heatmap(corr, annot=True, cmap="coolwarm", center=0)
+    plt.title("Correlation between different GEO Series and " + variable_name)
+    plt.tight_layout()
+    plt.show()
+    print(corr)
+    
+    overlap = {}
+    for gse in Genes_datasets:
+        a = set(variable)
+        b = set(Genes_datasets[gse].dropna())
+        overlap[gse] = len(a&b)/len(a|b)
+  
+    sns.barplot(x=list(overlap.keys()), y=list(overlap.values()))
+    plt.ylabel("Jaccard Index")
+    plt.xlabel("GEO Series")
+    plt.show()
+
+    print(len(UniqueDGEWith), len(UniqueBatchWith), len(UniqueLogRegWith), len(UniqueRandForestWith))
+    print(len(UniqueDGEWithout), len(UniqueBatchWithout), len(UniqueLogRegWithout), len(UniqueRandForestWithout))
+    """
     
