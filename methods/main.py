@@ -16,6 +16,7 @@ from sklearn.inspection import permutation_importance
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from typing import Literal
 from scipy.stats import zscore
+from collections import Counter
 
 # Functions to prepare the DataFrame for analysis
 def prepare_dataframe(dataframe):
@@ -1042,7 +1043,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+   # main()
 
 
     # Sehr viel manuelles für Venn-Diagramme und Korrelation, teilweise abhängig von Dateien in R erzeugt
@@ -1072,15 +1073,16 @@ if __name__ == '__main__':
     Genes_datasets.to_csv(os.path.join(directory, "Genes_datasets.csv"), index=True)
     """
 
-
-    """
+    """ 
+    # Correlation
+    directory = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
     Genes = pd.read_csv("/home/laszl/Praxisphase/Phase 1/data/Genes.csv")
     Genes_datasets = pd.read_csv(os.path.join(directory, "Genes_datasets.csv"), index_col=0)
     Pathways = pd.read_csv(os.path.join(directory, "pathways.csv"))
     Quality_Paths = pd.read_csv(os.path.join(directory, "pathways_positively_correlated_to_low_quality.tsv"), sep="\t")
     Quality_Paths = Quality_Paths["pathway"].tolist()
-    print(Genes_datasets.head())
     gene_mean_dict = Genes_datasets.mean(axis=1, skipna=True).to_dict()
+
     DGEWith = Genes["DGEWith"].tolist() 
     BatchWith = Genes["BatchWith"].tolist() 
     LogRegWith = Genes["LogRegWith"].tolist() 
@@ -1088,7 +1090,8 @@ if __name__ == '__main__':
     DGEWithout = Genes["DGEWithout"].tolist() 
     BatchWithout = Genes["BatchWithout"].tolist() 
     LogRegWithout = Genes["LogRegWithout"].tolist() 
-    RandForestWithout = Genes["RandForestWithout"].tolist() 
+    RandForestWithout = Genes["RandForestWithout"].tolist()
+
     all_genes_with = DGEWith + BatchWith + LogRegWith + RandForestWith
     all_genes_without = DGEWithout + BatchWithout + LogRegWithout + RandForestWithout
     Genes_with = [DGEWith, BatchWith, LogRegWith, RandForestWith]
@@ -1097,14 +1100,6 @@ if __name__ == '__main__':
     common_without = list(set.intersection(*map(set, Genes_without)))
     print("Common genes with outlier:", len(common_with))
     print("Common genes without outlier:", len(common_without))
-    common_DGE_BatchCor_with = list(set(DGEWith).intersection(set(BatchWith)) - set(common_with))
-    common_DGE_BatchCor_without = list(set(DGEWithout).intersection(set(BatchWithout)) - set(common_without))
-    common_Forest_LogReg_with = list(set(RandForestWith).intersection(set(LogRegWith)) - set(common_with))
-    common_Forest_LogReg_without = list(set(RandForestWithout).intersection(set(LogRegWithout)) - set(common_without))
-    common_Forest_Logreg_BatchCor_with = list(set(RandForestWith).intersection(set(LogRegWith)).intersection(set(BatchWith)) - set(common_with))
-    common_Forest_Logreg_BatchCor_without = list(set(RandForestWithout).intersection(set(LogRegWithout)).intersection(set(BatchWithout)) - set(common_without))
-    common_DGE_Forest_Logreg_with = list(set(DGEWith).intersection(set(RandForestWith)).intersection(set(LogRegWith)) - set(common_with))
-    common_DGE_Forest_Logreg_without = list(set(DGEWithout).intersection(set(RandForestWithout)).intersection(set(LogRegWithout)) - set(common_without))
 
     counts_with = Counter(all_genes_with)
     counts_without = Counter(all_genes_without)
@@ -1123,18 +1118,7 @@ if __name__ == '__main__':
     all_genes_difference = list(set(all_genes_with).union(set(all_genes_without)) - set(all_genes_overlap))
     print("Complete overlap genes:", len(complete_overlap))
     print("Complete difference genes:", len(complete_difference))
-    #print(len(common_with), len(common_without), len(common_DGE_BatchCor_with), len(common_DGE_BatchCor_without))
-    #print(len(common_Forest_LogReg_with), len(common_Forest_LogReg_without), len(common_Forest_Logreg_BatchCor_with), len(common_Forest_Logreg_BatchCor_without))
-    #print(len(common_DGE_Forest_Logreg_with), len(common_DGE_Forest_Logreg_without))
 
-    #Batch_overlap = list(set(BatchWith).intersection(set(BatchWithout)))
-
-    # Correlation between different GEO-Series
-    #GEO = Genes_datasets.corr()
-    #sns.heatmap(GEO, annot=True, cmap="coolwarm", center=0)
-    #plt.title("Correlation between different GEO Series")
-    #plt.tight_layout()
-    #plt.show()
     # Welche Pathways sind identisch
     for path in Quality_Paths:
         if path in Pathways["complete_overlap"].values:
@@ -1156,21 +1140,14 @@ if __name__ == '__main__':
 
     # Correlation between different GEO-Series and variables
     DGE_overlap = list(set(UniqueDGEWith).intersection(set(UniqueDGEWithout)))
-    print(len(DGE_overlap))
     DGE_difference = list(set(UniqueDGEWith).union(set(UniqueDGEWithout)) - set(set(UniqueDGEWith).intersection(set(UniqueDGEWithout))))
     Batch_overlap = list(set(UniqueBatchWith).intersection(set(UniqueBatchWithout)))
-    print(len(Batch_overlap))
     Batch_difference = list(set(UniqueBatchWith).union(set(UniqueBatchWithout)) - set(set(UniqueBatchWith).intersection(set(UniqueBatchWithout))))
     LogReg_overlap = list(set(UniqueLogRegWith).intersection(set(UniqueLogRegWithout)))
     LogReg_difference = list(set(UniqueLogRegWith).union(set(UniqueLogRegWithout)) - set(set(UniqueLogRegWith).intersection(set(UniqueLogRegWithout))))
     RandForest_overlap = list(set(UniqueRandForestWith).intersection(set(UniqueRandForestWithout)))
     RandForest_difference = list(set(UniqueRandForestWith).union(set(UniqueRandForestWithout)) - set(set(UniqueRandForestWith).intersection(set(UniqueRandForestWithout))))
-    #print(len(DGE_difference))
-    #print(len(Batch_difference))
-    #print(len(LogReg_overlap))
-    #print(len(LogReg_difference))
-    #print(len(RandForest_overlap))
-    #print(len(RandForest_difference))
+
     correlation_variables_unique = {
         "DGE (A)": DGE_overlap,
         "DGE (B)": DGE_difference,
@@ -1211,17 +1188,9 @@ if __name__ == '__main__':
         Gen_set[variable_name] = pd.Series({gene_id: gene_mean_dict[gene_id] for gene_id in variable})
         GEO = Gen_set.corr()
         correlation_output_methods[variable_name] = GEO[variable_name].drop(variable_name)
-    #variable = Batch_difference
-    #variable_name = 'Batch_difference'
-    #variable_title = 'the different Genes identified by Batch Correction with and without the outlier dataset'
-    #for gene_id in variable:
-    #    if gene_id not in gene_mean_dict:
-    #        print(f"Gene ID {gene_id} not found in gene_mean_dict.")
-    #Genes_datasets[variable_name] = pd.Series({gene_id: gene_mean_dict[gene_id] for gene_id in variable})
-    #GEO = Genes_datasets.corr()
-    #print(GEO[variable_name].drop(variable_name))
-    #print(GEO[variable_name])
+    
     output = pd.concat([correlation_output_unique, correlation_output_methods], axis=1)
+    output_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "output")
     #sns.set(font_scale=1.4)
     fig, ax = plt.subplots(figsize=(26, 6))
     sns.heatmap(correlation_output_unique.T, annot=True, cmap="coolwarm", center=0, annot_kws={"size": 30, "weight": "bold", "color": "black"})
@@ -1229,7 +1198,8 @@ if __name__ == '__main__':
     plt.xticks(rotation=0, fontsize=23, weight="bold")
     plt.yticks(fontsize=30, weight="bold")
     plt.tight_layout()
-    plt.savefig(os.path.join(directory, "correlation_unique.png"))
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    plt.savefig(os.path.join(output_path, "correlation_unique.png"))
     #plt.show()
     fig, ax = plt.subplots(figsize=(26, 7.5))
     sns.heatmap(correlation_output_methods.T, annot=True, cmap="coolwarm", center=0, annot_kws={"size": 30, "weight": "bold", "color": "black"})
@@ -1237,50 +1207,6 @@ if __name__ == '__main__':
     plt.xticks(rotation=0, fontsize=23, weight="bold")
     plt.yticks(fontsize=30, weight="bold")
     plt.tight_layout()
-    plt.savefig(os.path.join(directory, "correlation_method.png"))
+    plt.savefig(os.path.join(output_path, "correlation_method.png"))
     #plt.show()
     """
-
-    """
-    variable_name = 'all_genes_difference'
-    variable = all_genes_difference
-    blob = []
-    for gse in Genes_datasets:
-        blob += list(Genes_datasets[gse].dropna())
-    myset = set(blob)
-    converter = {}
-    counter = 0
-    for item in myset:
-        converter[item] = counter
-        counter += 1
-    converted_Geneset = {}
-    Genes_datasets_corr = pd.DataFrame(Genes_datasets)
-    Genes_datasets_corr[variable_name] = pd.Series(variable)
-    for gse in Genes_datasets_corr:
-        converted_Geneset[gse] = []
-        for gene in Genes_datasets_corr[gse].dropna():
-            converted_Geneset[gse].append(converter[gene])
-
-    converted_Geneset = pd.DataFrame.from_dict(converted_Geneset, orient='index').transpose()
-    corr = converted_Geneset.corr()
-    sns.heatmap(corr, annot=True, cmap="coolwarm", center=0)
-    plt.title("Correlation between different GEO Series and " + variable_name)
-    plt.tight_layout()
-    plt.show()
-    print(corr)
-    
-    overlap = {}
-    for gse in Genes_datasets:
-        a = set(variable)
-        b = set(Genes_datasets[gse].dropna())
-        overlap[gse] = len(a&b)/len(a|b)
-  
-    sns.barplot(x=list(overlap.keys()), y=list(overlap.values()))
-    plt.ylabel("Jaccard Index")
-    plt.xlabel("GEO Series")
-    plt.show()
-
-    print(len(UniqueDGEWith), len(UniqueBatchWith), len(UniqueLogRegWith), len(UniqueRandForestWith))
-    print(len(UniqueDGEWithout), len(UniqueBatchWithout), len(UniqueLogRegWithout), len(UniqueRandForestWithout))
-    """
-    
