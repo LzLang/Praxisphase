@@ -1,0 +1,112 @@
+\documentclass[margin=0mm, innermargin=3cm, blockverticalspace=15mm, colspace=15mm, subcolspace=8mm, a0paper, titleinnsersep = 0pt]{tikzposter}
+\usepackage{graphicx} 
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta}
+\usepackage[ngerman]{babel}
+\usepackage{multicol}
+\usepackage{wrapfig}
+\tikzposterlatexaffectionproofoff %Tikzposter Wasserzeichen ausblenden
+\usetikzlibrary{babel}
+\setlength{\columnsep}{2cm}
+
+%Abbildungsreferenzen Deutsch
+\addto\captionsngerman{
+  \renewcommand{\figurename}{Abb.}
+  \renewcommand{\tablename}{Tab.}
+}
+
+%Titel
+\title{\parbox{0.6\linewidth}{\centering Robustness of machine learning against Batch effects in RNA-seq data}}
+
+%Farbpalette in TH-Farbe von Originalvorlage
+\definecolorpalette{thpalette} {
+    \definecolor{thblue}{RGB}{0,91,153}
+}
+
+%Hintergrund: Rahmen etc.
+\definebackgroundstyle{frame}{
+    %Aussenrahmen
+    \draw[inner sep=0pt, line width=30pt, color=thblue, fill=white]
+    (-40,-57) rectangle (40, 57);
+    %Linien box Praxisphase von x,y
+    \draw[line width=15pt, color=thblue] (-40,45) -- (40,45);
+    \draw[line width=15pt, color=thblue] (-40,39) -- (40,39);
+    %Linien box Durchgefuehrt bei: Betrieb, Ort
+    %\draw[line width=15pt, color=thblue] (-40,-45) -- (40,-45);
+    \draw[line width=15pt, color=thblue] (-40,-51) -- (40,-51);
+}
+
+%Titel Style
+\definetitlestyle{thtitle}{
+    width=\paperwidth, roundedcorners=0, linewidth=0pt, innersep=1.5cm,
+    titletotopverticalspace=5cm, titletoblockverticalspace=6cm,
+    titlegraphictotitledistance=1pt, titletextscale=1
+}{}
+
+%Block Style
+\defineblockstyle{thblocks}{
+titlewidthscale=0.9, bodywidthscale=1,titleleft,
+titleoffsetx=0pt, titleoffsety=3mm, bodyoffsetx=0mm, bodyoffsety=19mm,
+bodyverticalshift=18mm, roundedcorners=5, linewidth=2pt,
+titleinnersep=6mm, bodyinnersep=1cm
+}{
+\draw[color=thblue, fill=blockbodybgcolor] (blockbody.south west)
+rectangle (blockbody.north east);
+\ifBlockHasTitle
+\draw[color=thblue, fill=thblue] (blocktitle.south west)
+rectangle (blocktitle.north east);
+\fi
+}
+
+%TH layout definieren
+\definelayouttheme{th}{
+    \usebackgroundstyle{frame}
+    \usecolorpalette{thpalette}
+    \usetitlestyle{thtitle}
+    \useblockstyle{thblocks}
+}
+
+\usetheme{th} 
+\begin{document}
+
+%Logos einfuegen
+\node (thlogo) at (32, 51) {\includegraphics[width=10cm]{bingen.pdf}};
+\node (betrieb) at (-32, 51) {\includegraphics[width=10cm]{mainz.png}};
+
+%Praxisphase von Vorname Name
+\node [above right,
+    outer sep=0pt,
+    fill opacity=0,
+    line width=0mm,
+    text opacity=1,
+    minimum width=80cm,
+    minimum height=6cm,
+    align=center,font=\Huge,
+    draw=none,fill=white] at ([shift={(0.5*\pgflinewidth,0.5*\pgflinewidth)}]-40,39) {Practical phase of Laszlo Lang\\Supervised by Dr. Maximilian Sprang – The Mayer Lab Mainz};
+
+%Durchgefuehrt bei Firma, Ort
+%\node [above right,
+%    outer sep=0pt,
+%    fill opacity=0,
+%    line width=0mm,
+%    text opacity=1,
+%    minimum width=80cm,
+%    minimum height=6cm,
+%    align=center,font=\Huge,
+%    draw=none,fill=white] at ([shift={(0.5*\pgflinewidth,0.5*\pgflinewidth)}]-40,-51) {Durchgeführt bei: %Betrieb, Ort};
+
+%Studiengang Angewandte Bioinformatik
+\node [above right,
+    outer sep=0pt,
+    fill opacity=0,
+    line width=0mm,
+    text opacity=1,
+    minimum width=80cm,
+    minimum height=6cm,
+    align=center,font=\Huge,
+    draw=none,fill=white] at ([shift={(0.5*\pgflinewidth,0.5*\pgflinewidth)}]-40,-57) {Bachelor's Degree Program „Angewandte Bioinformatik“};
+
+\maketitle[]
+
