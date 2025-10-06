@@ -19,7 +19,6 @@ if(!require("msigdbr", quietly = TRUE)) install.packages("msigdbr", type="source
 
 install.packages("UpSetR")
 
-#library(DESeq2)
 library(tidyverse)
 library(edgeR)
 library(ggplot2)
@@ -342,7 +341,7 @@ fora_common_pathways <- function(batch_cor, pathway_count = 100, gene_count = 10
   venn.diagram(
     x = listInput,
     category.names = c("DGE", "LogReg", "RandForest", "BatchCor"),
-    filename = paste(getwd(), '/output/Pathways_venn_diagramm_',name, '.png', sep=''),
+    filename = paste(getwd(), '/output/Pathways_venn_diagram_',name, '.png', sep=''),
     main = paste(name, sep=''),#+"Pathway-Level Overlap - ", 
     output = FALSE,
     disable.logging = TRUE,
@@ -409,7 +408,7 @@ common_pathways <- function(batch_cor, pathway_count = 100, gene_count = 1000, d
   venn.diagram(
     x = listInput,
     category.names = c("DGE", "LogReg", "RandForest", "BatchCor"),
-    filename = paste(getwd(), '/output/Pathways_venn_diagramm_', name, '.png', sep=''),
+    filename = paste(getwd(), '/output/Pathways_venn_diagram_', name, '.png', sep=''),
     main = paste(name, sep=''), #"Pathway-Level Overlap - ", 
     output = FALSE,
     disable.logging = TRUE,
@@ -465,7 +464,7 @@ common_features<- function(batch_cor, number=1000, name= '') {
   venn.diagram(
     x = listInput,
     category.names = c("DGE", "LogReg", "RandForest", "BatchCor"),
-    filename = paste(getwd(), '/output/Features_venn_diagramm_',name, '.png', sep=''),
+    filename = paste(getwd(), '/output/Features_venn_diagram_',name, '.png', sep=''),
     main = paste(name, sep=''), #"Gene-Level Overlap - ", 
     output = FALSE,
     disable.logging = TRUE,
