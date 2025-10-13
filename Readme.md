@@ -38,8 +38,26 @@ remain consistently detectable despite batch effects.
     - [plot_decision_tree](#plot_decision_tree)
     - [plot_feature_importance](#plot_feature_importance)
     - [plot_perm_importance](#plot_perm_importance)
-- [R]
-  - [Packages](#packages_1)
+- [R](#r)
+  - [Packages](#packages-1)
+  - [Functions to prepare the Data](#functions_to_prepare_the_data)
+    - [load_data](#load_data)
+    - [differential_expression](#differential_expression)
+    - [batch_correction](#batch_correction)
+  - [Functions for analysis and visualization](#functions_for_analysis_and_visualization)
+    - [over_representation](#over_representation)
+    - [fora_analysis](#fora_analysis)
+    - [do_enrichment](#do_enrichment)
+  - [Functions for common analysis](#functions_for_common_analysis)
+    - [fora_common_pathways](#fora_common_pathways)
+    - [common_pathways](#common_pathways)
+    - [common_features](#common_features)
+    - [common_Intersection](#common_Intersection)
+  - [Functions for export](#functions_for_export)
+    - [get_ontologie](#get_ontologie)
+    - [get_ontology_counts](#get_ontology_counts)
+    - [export_common](#export_common)
+    - [export_ontology_counts](#export_ontology_counts)
 
 ---
 
