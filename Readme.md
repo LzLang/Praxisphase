@@ -39,7 +39,7 @@ remain consistently detectable despite batch effects.
     - [plot_feature_importance](#plot_feature_importance)
     - [plot_perm_importance](#plot_perm_importance)
 - [R]
-  - [Packages](#packages-1)
+  - [Packages](#packages_1)
 
 ---
 
